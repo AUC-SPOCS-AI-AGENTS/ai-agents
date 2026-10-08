@@ -57,5 +57,5 @@ covers how to run that specific app.
 ## Important links
 
 - [Google Classrooms](https://classroom.google.com/c/ODg1MTY5ODAzNjg4)
-- [Github](https://github.com/walaamedhat/AI_Agent_Course)
+- [Github](https://github.com/AUC-SPOCS-AI-AGENTS/ai-agents)
 
