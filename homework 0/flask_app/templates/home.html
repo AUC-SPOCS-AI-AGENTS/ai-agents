@@ -1,13 +1,13 @@
 {% extends 'layout.html' %}
 {#
-  home.html - the landing page of your AI agent portfolio.
+home.html - the landing page of your AI agent portfolio.
 
-  This page extends layout.html, which provides the nav bar and footer.
-  Everything inside the block content / endblock tags is YOUR content.
+This page extends layout.html, which provides the nav bar and footer.
+Everything inside the block content / endblock tags is YOUR content.
 
-  NOTE: This is one of the two files you should customize for the homework.
-        Replace the placeholder text and image below with your own bio.
-        The other file to edit is flask_app/database/initial_data/*.csv
+NOTE: This is one of the two files you should customize for the homework.
+Replace the placeholder text and image below with your own bio.
+The other file to edit is flask_app/database/initial_data/*.csv
 #}
 
 {% block content %}
@@ -21,28 +21,27 @@
       Profile photo — replace headshot.png with your own image.
       Put your image file in flask_app/static/images/ and update the filename below.
     -->
-    <img
-      src="{{ url_for('static', filename='images/headshot.png') }}"
-      alt="Profile photo"
-      class="profile-photo"
-    >
+    <img src="{{ url_for('static', filename='images/shahd.JPEG') }}" alt="Profile photo" class="profile-photo">
+
 
     <div class="profile-text">
 
       <!-- NOTE: Replace this with your own name -->
-      <h1>Mohammad M. Ghassemi</h1>
+      <h1>Shahd Nabil Batrawi</h1>
 
       <!-- NOTE: Replace this with your own title or tagline -->
-      <p class="subtitle">Assistant Professor · Computer Science · Michigan State University</p>
+      <p class="subtitle">Computer Science Graduate · Al-Azhar University – Gaza</p>
 
       <!--
         NOTE: Replace this paragraph with your own bio (2–4 sentences).
         What do you study? What are you interested in? What's a fun fact about you?
       -->
       <p>
-        I'm a researcher and educator working at the intersection of AI and healthcare.
-        My work focuses on building systems that help clinicians make better decisions
-        using machine learning and natural language processing.
+        I am a Computer Science graduate from Al-Azhar University–Gaza with experience in teaching and academic
+        follow-up. My background combines academic knowledge with an interest in learning new technologies and
+        developing my skills. I am looking for opportunities to grow professionally, gain practical experience, and
+        contribute to an educational or technology-focused team.
+
       </p>
 
       <a href="/resume" class="btn">View My Resume →</a>
@@ -54,29 +53,26 @@
   <div class="info-cards">
 
     <div class="card">
-      <h3>What This App Is</h3>
+      <h3>About Me</h3>
       <p>
-        This is your AI Agent portfolio — a web application that uses a language model
-        to answer questions about your resume. By the end of the semester, you'll extend
-        it with more sophisticated agents.
+        I am a Computer Science graduate from Al-Azhar University–Gaza with experience in teaching and academic
+        follow-up. I am interested in developing my technical skills and gaining practical experience in technology and
+        education.
       </p>
     </div>
 
     <div class="card">
-      <h3>How to Customize</h3>
-      <p>
-        Edit the CSV files in <code>flask_app/database/initial_data/</code> to add your
-        own resume data, then restart the app. Edit this file (<code>home.html</code>)
-        to update your bio and photo.
+      <h3>My Background</h3>
+      <p>My background includes academic projects, teaching, and student follow-up. I am continuing to develop my
+        knowledge and skills to prepare for future opportunities in technology and education.
       </p>
     </div>
 
     <div class="card">
-      <h3>Try the AI Chat</h3>
+      <h3>Explore My Resume</h3>
       <p>
-        Visit the <a href="/resume">Resume page</a> and ask the AI assistant a question
-        about the resume. The chat panel on the right reads your resume data directly
-        from the database before answering.
+        Visit my resume page <a href="/resume">Resume page</a> to learn more about my education, experience, academic
+        activities, and skills. You can also ask the AI assistant questions about my background and qualifications.
       </p>
     </div>
 

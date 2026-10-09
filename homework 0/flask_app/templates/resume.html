@@ -1,25 +1,25 @@
 {% extends 'layout.html' %}
 {#
-  resume.html — displays the resume and an AI chat panel side by side.
+resume.html — displays the resume and an AI chat panel side by side.
 
-  HOW THE DATA GETS HERE:
-    The route function in routes.py calls db.getResumeData() and passes
-    the result to this template as the variable 'resume'.
-    You can trace the full flow: routes.py → database.py → here.
+HOW THE DATA GETS HERE:
+The route function in routes.py calls db.getResumeData() and passes
+the result to this template as the variable 'resume'.
+You can trace the full flow: routes.py → database.py → here.
 
-  HOW THE JINJA2 LOOPS WORK:
-    Jinja2 runs on the server before the page is sent to the browser.
-    The for loops below iterate over the resume dictionary and generate
-    HTML for each institution, position, experience, and skill.
-    By the time the browser receives this page, all the Jinja tags are
-    replaced with real HTML content.
+HOW THE JINJA2 LOOPS WORK:
+Jinja2 runs on the server before the page is sent to the browser.
+The for loops below iterate over the resume dictionary and generate
+HTML for each institution, position, experience, and skill.
+By the time the browser receives this page, all the Jinja tags are
+replaced with real HTML content.
 
-  HOW THE CHAT WORKS:
-    The chat panel (right side) uses Socket.IO — a WebSocket library.
-    When you click Send, JavaScript emits a 'send_message' event to the server.
-    The server queries the database for your resume, builds a system prompt,
-    calls OpenRouter, and emits 'receive_message' back with the AI's reply.
-    See flask_app/utils/socket_events.py for the server-side handler.
+HOW THE CHAT WORKS:
+The chat panel (right side) uses Socket.IO — a WebSocket library.
+When you click Send, JavaScript emits a 'send_message' event to the server.
+The server queries the database for your resume, builds a system prompt,
+calls OpenRouter, and emits 'receive_message' back with the AI's reply.
+See flask_app/utils/socket_events.py for the server-side handler.
 #}
 
 {% block content %}
@@ -28,22 +28,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
 
 {# marked.js: converts markdown text (e.g. **bold**, lists) into HTML.
-   The AI often replies in markdown, so we render it nicely instead of
-   showing raw asterisks and hashes. #}
+The AI often replies in markdown, so we render it nicely instead of
+showing raw asterisks and hashes. #}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <div class="resume-layout">
 
   {# ============================================================
-     LEFT COLUMN: Resume content (rendered from database data)
-     ============================================================ #}
+  LEFT COLUMN: Resume content (rendered from database data)
+  ============================================================ #}
   <div class="resume-content">
     <h1>Resume</h1>
 
     {#
-      Loop over each institution in the resume dictionary.
-      'institution' is one entry — e.g. Michigan State University.
-      resume.items() gives us (id, data) pairs for each institution.
+    Loop over each institution in the resume dictionary.
+    'institution' is one entry — e.g. Michigan State University.
+    resume.items() gives us (id, data) pairs for each institution.
     #}
     {% for inst_id, institution in resume.items() %}
     <div class="institution">
@@ -55,8 +55,8 @@
       </p>
 
       {#
-        Loop over each position held at this institution.
-        e.g. 'Instructor', 'Researcher'
+      Loop over each position held at this institution.
+      e.g. 'Instructor', 'Researcher'
       #}
       {% for pos_id, position in institution.positions.items() %}
       <div class="position">
@@ -68,19 +68,19 @@
         <p class="responsibilities">{{ position.responsibilities }}</p>
 
         {#
-          Loop over specific projects or achievements within this position.
-          e.g. 'CSE 491 — AI Agents'
+        Loop over specific projects or achievements within this position.
+        e.g. 'CSE 491 — AI Agents'
         #}
         {% for exp_id, experience in position.experiences.items() %}
         <div class="experience">
 
           {# Show the experience name as a link if a hyperlink is provided #}
           {% if experience.hyperlink %}
-            <a href="{{ experience.hyperlink }}" target="_blank" class="experience-name">
-              {{ experience.name }}
-            </a>
+          <a href="{{ experience.hyperlink }}" target="_blank" class="experience-name">
+            {{ experience.name }}
+          </a>
           {% else %}
-            <span class="experience-name">{{ experience.name }}</span>
+          <span class="experience-name">{{ experience.name }}</span>
           {% endif %}
 
           <span class="experience-desc"> — {{ experience.description }}</span>
@@ -109,18 +109,18 @@
   </div>
 
   {# ============================================================
-     RIGHT COLUMN: AI Chat Panel
+  RIGHT COLUMN: AI Chat Panel
 
-     HOW THIS WORKS:
-       1. User types a message and clicks Send (or presses Enter)
-       2. sendMessage() emits a 'send_message' WebSocket event to Flask
-       3. socket_events.py handles it: queries resume → calls OpenRouter → emits reply
-       4. socket.on('receive_message') fires here and displays the reply
+  HOW THIS WORKS:
+  1. User types a message and clicks Send (or presses Enter)
+  2. sendMessage() emits a 'send_message' WebSocket event to Flask
+  3. socket_events.py handles it: queries resume → calls OpenRouter → emits reply
+  4. socket.on('receive_message') fires here and displays the reply
 
-     QUESTION: How is this different from a normal HTTP fetch() call?
-       With fetch(), you send one request and get one response, then the
-       connection closes. With WebSockets, the connection stays open —
-       the server can push messages to you at any time.
+  QUESTION: How is this different from a normal HTTP fetch() call?
+  With fetch(), you send one request and get one response, then the
+  connection closes. With WebSockets, the connection stays open —
+  the server can push messages to you at any time.
   #}
   <div class="chat-panel">
 
@@ -139,13 +139,8 @@
 
     {# Input area #}
     <div class="chat-input-area">
-      <textarea
-        id="chat-input"
-        class="chat-input"
-        placeholder="Ask a question about the resume..."
-        rows="2"
-        onkeydown="handleEnterKey(event)"
-      ></textarea>
+      <textarea id="chat-input" class="chat-input" placeholder="Ask a question about the resume..." rows="2"
+        onkeydown="handleEnterKey(event)"></textarea>
       <button onclick="sendMessage()" class="chat-send-btn">Send</button>
     </div>
 
@@ -165,7 +160,7 @@
   // When the server emits 'receive_message', display the AI's reply.
   // This is the listener side — sendMessage() below is the emitter side.
   // ----------------------------------------------------------------
-  socket.on('receive_message', function(data) {
+  socket.on('receive_message', function (data) {
     removeTypingIndicator();
     displayMessage('AI', data.response);
   });
@@ -176,7 +171,7 @@
   // ----------------------------------------------------------------
   function sendMessage() {
     const input_element = document.getElementById('chat-input');
-    const user_message  = input_element.value.trim();
+    const user_message = input_element.value.trim();
 
     if (!user_message) return;   // don't send empty messages
 
@@ -201,8 +196,8 @@
   // User messages are shown as plain text; AI messages go through marked.js
   // so markdown (bold, lists, tables) renders as HTML instead of raw symbols.
   function displayMessage(sender, message_text) {
-    const chat_log   = document.getElementById('chat-log');
-    const bubble     = document.createElement('div');
+    const chat_log = document.getElementById('chat-log');
+    const bubble = document.createElement('div');
     bubble.className = (sender === 'You') ? 'msg-user' : 'msg-ai';
     if (sender === 'You') {
       bubble.textContent = sender + ': ' + message_text;
