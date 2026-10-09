@@ -26,7 +26,7 @@ Add this repo as an `upstream` remote so you can pull in new homeworks as
 they're released:
 
 ```bash
-git remote add upstream https://github.com/spocs-coders/ai-agents
+git remote add upstream https://github.com/AUC-SPOCS-AI-AGENTS/ai-agents
 ```
 
 When a new homework is released, pull it into your fork with:
@@ -54,7 +54,8 @@ This creates a single Python virtual environment (`venv/`) and installs
 only do this once. Each homework's own README (e.g. `homework 0/README.md`)
 covers how to run that specific app.
 
-## Important links 
+## Important links
 
 - [Google Classrooms](https://classroom.google.com/c/ODg1MTY5ODAzNjg4)
-- [Github](https://github.com/walaamedhat/AI_Agent_Course)
+- [Github](https://github.com/AUC-SPOCS-AI-AGENTS/ai-agents)
+

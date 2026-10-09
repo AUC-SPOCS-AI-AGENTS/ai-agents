@@ -13,7 +13,7 @@
 #
 # After running this script, you still need to:
 #   - Add your OpenRouter API key to .env
-#   - Activate the venv (source venv/bin/activate) and cd into the homework
+#   - Activate the venv (source venv/Scripts/activate) and cd into the homework
 #     folder you're working on (e.g. "homework 0") to run its app.py
 
 set -e   # stop immediately if any command fails
@@ -61,7 +61,7 @@ echo ""
 echo "Step 3: Installing packages from requirements.txt..."
 
 # Activate the venv so pip installs into it (not into your system Python)
-source venv/bin/activate
+source venv/Scripts/activate
 pip install --quiet --upgrade pip
 pip install --quiet -r requirements.txt
 
