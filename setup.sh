@@ -29,14 +29,14 @@ echo ""
 # ----------------------------------------------------------------
 echo "Step 1: Checking Python version..."
 
-if ! command -v python3 &> /dev/null; then
+if ! command -v python &> /dev/null; then
     echo ""
-    echo "ERROR: Python 3 is not installed or not on your PATH."
-    echo "Please install Python 3 from https://www.python.org/downloads/"
+    echo "ERROR: Python  is not installed or not on your PATH."
+    echo "Please install Python  from https://www.python.org/downloads/"
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 --version)
+PYTHON_VERSION=$(python --version)
 echo "  Found: $PYTHON_VERSION"
 
 # ----------------------------------------------------------------
@@ -50,7 +50,7 @@ echo "Step 2: Creating virtual environment (venv)..."
 if [ -d "venv" ]; then
     echo "  venv/ already exists — skipping creation."
 else
-    python3 -m venv venv
+    python -m venv venv
     echo "  Created venv/"
 fi
 
@@ -61,7 +61,7 @@ echo ""
 echo "Step 3: Installing packages from requirements.txt..."
 
 # Activate the venv so pip installs into it (not into your system Python)
-source venv/bin/activate
+source venv/Scripts/activate
 pip install --quiet --upgrade pip
 pip install --quiet -r requirements.txt
 

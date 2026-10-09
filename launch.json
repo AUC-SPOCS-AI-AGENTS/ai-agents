@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run AI Resume Agent",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/homework 0/app.py",
+            "cwd": "${workspaceFolder}/homework 0",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
