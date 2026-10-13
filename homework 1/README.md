@@ -15,6 +15,8 @@ This guide gives you working code for every piece — your job is to follow alon
 
 ---
 
+
+
 ## How It Works
 
 ```
@@ -46,6 +48,8 @@ JavaScript displays the reply AND refreshes the resume panel
 Every expert is the **same underlying model** — what makes them behave differently is the *system prompt* each one gets, built from a shared template. That's the idea you're implementing in Step 1.
 
 ---
+
+
 
 ## Example Flows
 
@@ -156,6 +160,8 @@ No database query happens anywhere in this one — it's the only expert whose an
 
 ---
 
+
+
 ## Project File Map
 
 You're extending the Homework 0 codebase, not starting over. Copy your working `homework 0/flask_app` and `app.py` into a new `homework 1/` folder in your fork, then make these changes:
@@ -187,7 +193,11 @@ No changes to `requirements.txt` — everything below uses the Python standard l
 
 ---
 
+
+
 ## Building It
+
+
 
 ### Step 0: Clean up how `db` is shared and change the model usage
 
@@ -269,14 +279,16 @@ def fill_template(role, domain, specific_instructions, request,
 
 Each expert is defined by five pieces of text. Use this table as your actual content — you'll type these into a CSV in Step 3:
 
-| Field | Database Read Expert | Database Write Expert | Content Expert | Orchestrator |
-|---|---|---|---|---|
-| **domain** | SQL query generation for a resume database | generating Python code that modifies a resume database | answering questions about the resume currently on screen | decomposing user requests into a plan of expert calls |
-| **specific_instructions** | Respond with a single valid SQLite `SELECT` query only. No markdown, no explanation — SQL only. | Respond with executable Python only, calling `db.insertRows(table, columns, values)`. First use `db.query(...)` to check whether the item already exists. End your code by assigning a variable named `outcome` to the **exact message to show the user**: `"New <element> added to the <table> table."` if you inserted a row, or `"Element already exists in the <table> table."` if you found it already there and skipped the insert — filling in `<element>` and `<table>` with the real values you used. No markdown, no explanation. | Answer using only the resume content given below as context. | Respond with a Python list of strings, each an exact call in the form `handle_ai_chat_request(role="<Expert Name>", message="<message>")`. Order matters — later calls can depend on earlier results. Only use these role names: Database Read Expert, Database Write Expert, Content Expert. |
-| **background_context** | Schema: institutions(inst_id, type, name, department, address, city, state, zip); positions(position_id, inst_id, title, responsibilities, start_date, end_date); experiences(experience_id, position_id, name, description, hyperlink, start_date, end_date); skills(skill_id, experience_id, name, skill_level) | Same schema as the Read Expert, plus: db.insertRows(table, columns, values) inserts one row. A value may be a nested (SELECT ...) string to look up a foreign key by name, e.g. (SELECT experience_id FROM experiences WHERE name = 'MSU Research'). **`db.query(sql)` returns a LIST OF DICTS**, e.g. `[{'experience_id': 5}, {'experience_id': 9}]` — never a list of tuples. To loop over IDs from a query: `for row in db.query(sql): experience_id = row['experience_id']`. **This code runs as real Python, not SQL** — for a missing/unknown value use Python's `None`, never SQL's `NULL`. | *(leave blank — see note below)* | Available experts: Database Read Expert (answers questions from the DB), Database Write Expert (modifies the DB), Content Expert (answers from the currently visible resume content). |
-| **few_shot_examples** | Q: How long did they work at MSU? -> SELECT p.start_date, p.end_date FROM positions p JOIN institutions i ON p.inst_id = i.inst_id WHERE i.name = 'MSU'; | Request: Add Python as a skill to his MSU research experience -> `existing = db.query("SELECT * FROM skills WHERE name = 'Python' AND experience_id = (SELECT experience_id FROM experiences WHERE name = 'MSU Research')")` then `if existing: outcome = "Element already exists in the skills table."` else `db.insertRows('skills', ['experience_id', 'name', 'skill_level'], ["(SELECT experience_id FROM experiences WHERE name = 'MSU Research')", 'Python', 5]); outcome = "New Python added to the skills table."` | *(leave blank)* | Request: Does he know React? If not, add it to his most recent experience. -> ["handle_ai_chat_request(role=\"Database Read Expert\", message=\"Does he have React listed as a skill?\")", "handle_ai_chat_request(role=\"Database Write Expert\", message=\"Add React as a skill to his most recent experience\")"] |
 
-**Why does `outcome` hold the full message instead of a short status like `'inserted'`?** Only the generated code actually knows which table and value it touched. If `outcome` were just a bare status, a later step would have to *guess* the table name from the user's wording to build the final message — and in testing, that guess was sometimes wrong (e.g. "added to the experience table" instead of "skills table"), or even left the literal `<table>` placeholder unfilled. Having the Write Expert build its own accurate message avoids that entirely.
+| Field                     | Database Read Expert                                                                                                                                                                                                                                                                                              | Database Write Expert                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Content Expert                                               | Orchestrator                                                                                                                                                                                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **domain**                | SQL query generation for a resume database                                                                                                                                                                                                                                                                        | generating Python code that modifies a resume database                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | answering questions about the resume currently on screen     | decomposing user requests into a plan of expert calls                                                                                                                                                                                                                                                |
+| **specific_instructions** | Respond with a single valid SQLite `SELECT` query only. No markdown, no explanation — SQL only.                                                                                                                                                                                                                   | Respond with executable Python only, calling `db.insertRows(table, columns, values)`. First use `db.query(...)` to check whether the item already exists. End your code by assigning a variable named `outcome` to the **exact message to show the user**: `"New <element> added to the <table> table."` if you inserted a row, or `"Element already exists in the <table> table."` if you found it already there and skipped the insert — filling in `<element>` and `<table>` with the real values you used. No markdown, no explanation.                                                        | Answer using only the resume content given below as context. | Respond with a Python list of strings, each an exact call in the form `handle_ai_chat_request(role="<Expert Name>", message="<message>")`. Order matters — later calls can depend on earlier results. Only use these role names: Database Read Expert, Database Write Expert, Content Expert.        |
+| **background_context**    | Schema: institutions(inst_id, type, name, department, address, city, state, zip); positions(position_id, inst_id, title, responsibilities, start_date, end_date); experiences(experience_id, position_id, name, description, hyperlink, start_date, end_date); skills(skill_id, experience_id, name, skill_level) | Same schema as the Read Expert, plus: db.insertRows(table, columns, values) inserts one row. A value may be a nested (SELECT ...) string to look up a foreign key by name, e.g. (SELECT experience_id FROM experiences WHERE name = 'MSU Research'). `db.query(sql)` **returns a LIST OF DICTS**, e.g. `[{'experience_id': 5}, {'experience_id': 9}]` — never a list of tuples. To loop over IDs from a query: `for row in db.query(sql): experience_id = row['experience_id']`. **This code runs as real Python, not SQL** — for a missing/unknown value use Python's `None`, never SQL's `NULL`. | *(leave blank — see note below)*                             | Available experts: Database Read Expert (answers questions from the DB), Database Write Expert (modifies the DB), Content Expert (answers from the currently visible resume content).                                                                                                                |
+| **few_shot_examples**     | Q: How long did they work at MSU? -> SELECT p.start_date, p.end_date FROM positions p JOIN institutions i ON p.inst_id = i.inst_id WHERE i.name = 'MSU';                                                                                                                                                          | Request: Add Python as a skill to his MSU research experience -> `existing = db.query("SELECT * FROM skills WHERE name = 'Python' AND experience_id = (SELECT experience_id FROM experiences WHERE name = 'MSU Research')")` then `if existing: outcome = "Element already exists in the skills table."` else `db.insertRows('skills', ['experience_id', 'name', 'skill_level'], ["(SELECT experience_id FROM experiences WHERE name = 'MSU Research')", 'Python', 5]); outcome = "New Python added to the skills table."`                                                                         | *(leave blank)*                                              | Request: Does he know React? If not, add it to his most recent experience. -> ["handle_ai_chat_request(role=Database Read Expert, message=Does he have React listed as a skill?)", "handle_ai_chat_request(role=Database Write Expert, message=Add React as a skill to his most recent experience)"] |
+
+
+**Why does** `outcome` **hold the full message instead of a short status like** `'inserted'`**?** Only the generated code actually knows which table and value it touched. If `outcome` were just a bare status, a later step would have to *guess* the table name from the user's wording to build the final message — and in testing, that guess was sometimes wrong (e.g. "added to the experience table" instead of "skills table"), or even left the literal `<table>` placeholder unfilled. Having the Write Expert build its own accurate message avoids that entirely.
 
 **Why is the Content Expert's context blank?** Homework 0's stack has no page-scraping (no BeautifulSoup, no Vue) — so instead of parsing HTML off the page, "current page content" is just defined as the resume data already available server-side via `db.getResumeText()` (you built this in Homework 0). That gets added in automatically at request time, not stored in the config — see Step 4.
 
@@ -306,7 +318,7 @@ Create `flask_app/database/initial_data/llm_roles.csv` with header row `role_id,
 
 Then, in `flask_app/utils/database.py`, add `'llm_roles'` to the `TABLE_ORDER` list near the top of the file (same mechanism that already creates and seeds `institutions`, `positions`, `experiences`, and `skills` — no other changes needed for it to be auto-created on startup).
 
-**One more required fix to `database.py`'s existing `query()` method.** The schema files already declare `FOREIGN KEY` constraints (e.g. `skills.experience_id -> experiences.experience_id`), but SQLite does not enforce them unless a connection explicitly turns that on — and Homework 0's `query()` never did, because it never needed to (it only ever read). That's about to matter: if the Write Expert's generated code ever inserts a bad `experience_id` (a realistic mistake — see "Known Limitations" below), an unenforced foreign key means the bad row gets inserted silently instead of raising an error you can catch. Add this one line right after `connection = sqlite3.connect(self.db_path)` in `query()`:
+**One more required fix to** `database.py`**'s existing** `query()` **method.** The schema files already declare `FOREIGN KEY` constraints (e.g. `skills.experience_id -> experiences.experience_id`), but SQLite does not enforce them unless a connection explicitly turns that on — and Homework 0's `query()` never did, because it never needed to (it only ever read). That's about to matter: if the Write Expert's generated code ever inserts a bad `experience_id` (a realistic mistake — see "Known Limitations" below), an unenforced foreign key means the bad row gets inserted silently instead of raising an error you can catch. Add this one line right after `connection = sqlite3.connect(self.db_path)` in `query()`:
 
 ```python
 connection.execute("PRAGMA foreign_keys = ON")
@@ -519,18 +531,22 @@ This reuses your existing `/resume` route unchanged — no new API endpoint need
 
 Work through these four prompts in order — each one exercises a different part of what you just built:
 
-| Test input | Expert(s) invoked | What you should see |
-|---|---|---|
-| "How long did they work at [institution]?" | Database Read Expert | Console prints a `SELECT` query; chat reply states an accurate duration |
-| "Add '[skill]' as a skill to [experience]" | Database Write Expert | Console prints generated Python; the skill appears on the resume page right after the reply, and is still there after a manual page reload |
-| "Does he know [skill]? If not, add it to [experience]." | Orchestrator → Read Expert → Write Expert | Console prints an ordered plan naming both experts; both actually run, in that order |
-| "What is this page about?" | Content Expert | Answer grounded in the resume text; no SQL/DB query involved |
+
+| Test input                                              | Expert(s) invoked                         | What you should see                                                                                                                        |
+| ------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| "How long did they work at [institution]?"              | Database Read Expert                      | Console prints a `SELECT` query; chat reply states an accurate duration                                                                    |
+| "Add '[skill]' as a skill to [experience]"              | Database Write Expert                     | Console prints generated Python; the skill appears on the resume page right after the reply, and is still there after a manual page reload |
+| "Does he know [skill]? If not, add it to [experience]." | Orchestrator → Read Expert → Write Expert | Console prints an ordered plan naming both experts; both actually run, in that order                                                       |
+| "What is this page about?"                              | Content Expert                            | Answer grounded in the resume text; no SQL/DB query involved                                                                               |
+
 
 If a step fails, the console output (the `print()` lines you added in Step 4) is your first debugging tool — it shows you exactly what the model generated before it was executed.
 
-> **Watch your API usage while testing.** Homework 0 made one model call per chat message. Homework 1's Orchestrator makes *several* — one to plan, one per expert it calls, one to synthesize — so a single compound question can cost 3-5x what Homework 0 did. OpenRouter's free tier caps requests **per day, per account, shared across every `:free` model** — switching `DEFAULT_MODEL` to a different free model does not reset or bypass this cap. If `send_message` starts returning `⚠️ OpenRouter error: Rate limit exceeded: free-models-per-day`, that's what's happening; 
+> **Watch your API usage while testing.** Homework 0 made one model call per chat message. Homework 1's Orchestrator makes *several* — one to plan, one per expert it calls, one to synthesize — so a single compound question can cost 3-5x what Homework 0 did. OpenRouter's free tier caps requests **per day, per account, shared across every** `:free` **model** — switching `DEFAULT_MODEL` to a different free model does not reset or bypass this cap. If `send_message` starts returning `⚠️ OpenRouter error: Rate limit exceeded: free-models-per-day`, that's what's happening; 
 
 ---
+
+
 
 ## Known Limitations
 
@@ -538,7 +554,7 @@ This design was built and tested against a real model before being written up. T
 
 - **Write outcomes used to be ungrounded.** An earlier version had `outcome` hold a bare status like `'inserted'`, and asked the synthesis step to guess the table name from the user's phrasing to build the final message. In testing, that guess was sometimes wrong ("added to the *experience* table" instead of *skills*), and once left the literal `<table>` placeholder unfilled in the reply the user would have seen. Fixed by having the Write Expert's own code produce the complete, accurate message (Step 2) — it's the only thing that actually knows what it wrote.
 - **Foreign keys weren't enforced.** SQLite ignores `FOREIGN KEY` declarations unless a connection turns that on. Without the `PRAGMA foreign_keys = ON` fix in Step 3, a Write Expert bug (e.g. looping over `db.query()` results as if they were tuples instead of dicts — an easy mistake, since that's a common pattern with other SQL libraries) silently inserted a row with a garbage `experience_id` while still reporting success. With the fix, the same bug now raises a catchable error instead of corrupting data quietly.
-- **`NULL` vs `None`.** The Write Expert's generated code is fluent in SQL, where `NULL` is normal — and occasionally reaches for `NULL` instead of Python's `None` for a missing value, which crashes with `NameError: name 'NULL' is not defined` since this code runs as real Python, not SQL. Fixed two ways: the Write Expert's `background_context` now explicitly says to use `None`, and `execute_write_action` binds `NULL = None` in the `exec()` globals as a compatibility shim, so even if the model slips up again, the code still runs.
+- `NULL` **vs** `None`**.** The Write Expert's generated code is fluent in SQL, where `NULL` is normal — and occasionally reaches for `NULL` instead of Python's `None` for a missing value, which crashes with `NameError: name 'NULL' is not defined` since this code runs as real Python, not SQL. Fixed two ways: the Write Expert's `background_context` now explicitly says to use `None`, and `execute_write_action` binds `NULL = None` in the `exec()` globals as a compatibility shim, so even if the model slips up again, the code still runs.
 
 A few more things you should expect, not fix — they're inherent to this design, not bugs in it:
 
@@ -548,6 +564,8 @@ A few more things you should expect, not fix — they're inherent to this design
 
 ---
 
+
+
 ## Questions to Think About
 
 You don't need to submit answers, but you'll be asked about these:
@@ -555,11 +573,13 @@ You don't need to submit answers, but you'll be asked about these:
 1. **Prompt templates as reusable configs.** What would it take to add a fifth expert — say, a "Skills Coach" that suggests skills to add — with zero changes to `llm.py`?
 2. **Why decompose at all?** Why does the Orchestrator break a compound request into ordered steps instead of one prompt trying to do everything at once?
 3. **What changed from Homework 0?** What's gained, and what's lost, going from one system prompt to four coordinated experts?
-4. **`eval()` and `exec()` on model output.** The Orchestrator's plan and the Write Expert's code are both executed directly. What could a strange, confused, or deliberately adversarial user message cause the model to generate — and what would actually happen if that ran? What would you change here if this were a production system instead of a classroom exercise?
+4. `eval()` **and** `exec()` **on model output.** The Orchestrator's plan and the Write Expert's code are both executed directly. What could a strange, confused, or deliberately adversarial user message cause the model to generate — and what would actually happen if that ran? What would you change here if this were a production system instead of a classroom exercise?
 5. **Few-shot examples matter.** Edit one of the examples in your `llm_roles` data and see how the generated SQL/code/plans change. What does that tell you about how much of an LLM's behavior comes from its instructions versus its examples?
 6. **From lecture, what prompt engineering techniques could you use?** How would you apply them to this multi-expert system?
 
 ---
+
+
 
 ## Submitting
 
@@ -569,10 +589,11 @@ Push your work to your fork:
 cd "homework 1"
 git add .
 git commit -m "Homework 1"
-git push origin main
+git push origin [BranchName]
 ```
 
 Then record a short demo video (see `documentation/rubric.md` for exactly what to show and how it's graded), and submit **both** of the following via the course submission form:
 
 1. Your demo video
-2. Your fork's GitHub URL (e.g. `https://github.com/YOUR-USERNAME/ai-agents`) so the grader can view your code
+2. Your fork's GitHub URL (e.g. `https://github.com/YOUR-USERNAME/ai-agents`) **OR** the URL of your Pull Request (PR) on your team lead's repository. So the grader can view your code
+
