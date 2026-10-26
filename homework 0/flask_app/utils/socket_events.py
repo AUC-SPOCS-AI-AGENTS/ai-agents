@@ -59,7 +59,7 @@ def handle_message(data):
     # If anything goes wrong (bad key, no internet, API error), we catch the
     # exception and emit a helpful error message instead of hanging silently.
     try:
-        ai_response = send_message(user_message, system_prompt)
+        ai_response = send_message(user_message, current_app.dp)
     except Exception as error:
         print(f"LLM error: {error}")
         ai_response = f"⚠️ Could not reach the AI: {error}"
