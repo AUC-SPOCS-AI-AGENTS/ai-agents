@@ -25,7 +25,6 @@ from flask import render_template
 # db is set by create_app() in __init__.py after the app is initialized.
 # It gives every route access to the database without creating a new
 # connection on each request.
-db = None
 
 
 # ------------------------------------------------------------------
@@ -64,5 +63,5 @@ def resume():
     #         flask_app/database/initial_data/
     #       Then restart the app to reload the database.
     """
-    resume_data = db.getResumeData()
+    resume_data = app.db.getResumeData()
     return render_template('resume.html', resume=resume_data)

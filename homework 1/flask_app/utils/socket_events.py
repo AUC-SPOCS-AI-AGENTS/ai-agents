@@ -17,13 +17,12 @@ HOW EVENTS WORK:
   The @socketio.on(...) decorator works just like @app.route(...) in Flask,
   but for WebSocket events instead of HTTP requests.
 """
-
+from flask import current_app
 from flask_socketio import emit
 from flask_app import socketio
-from flask_app.utils.llm import send_message
+from flask_app.utils.llm import handle_ai_chat_request
 
 # This is set by create_app() in __init__.py so this file can use the database.
-db = None
 
 
 @socketio.on('send_message')
@@ -51,6 +50,7 @@ def handle_message(data):
     if not user_message:
         return
 
+    db = current_app.db
     # Build the system prompt that tells the AI about the student's resume.
     # This is what makes it a "resume reviewer" rather than a generic chatbot.
     system_prompt = build_resume_system_prompt(db)
@@ -59,7 +59,8 @@ def handle_message(data):
     # If anything goes wrong (bad key, no internet, API error), we catch the
     # exception and emit a helpful error message instead of hanging silently.
     try:
-        ai_response = send_message(user_message, system_prompt)
+        ai_response = handle_ai_chat_request(db, role="Orchestrator", message=user_message)
+
     except Exception as error:
         print(f"LLM error: {error}")
         ai_response = f"⚠️ Could not reach the AI: {error}"

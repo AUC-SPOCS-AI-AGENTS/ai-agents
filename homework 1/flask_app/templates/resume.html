@@ -165,10 +165,20 @@
   // When the server emits 'receive_message', display the AI's reply.
   // This is the listener side — sendMessage() below is the emitter side.
   // ----------------------------------------------------------------
-  socket.on('receive_message', function(data) {
-    removeTypingIndicator();
-    displayMessage('AI', data.response);
-  });
+  async function refreshResumeContent() {
+  const html = await (await fetch('/resume')).text();
+  const newContent = new DOMParser().parseFromString(html, 'text/html').querySelector('.resume-content');
+  if (newContent) document.querySelector('.resume-content').innerHTML = newContent.innerHTML;
+}
+  
+    socket.on('receive_message', function(data) {
+  removeTypingIndicator();
+  displayMessage('AI', data.response);
+  refreshResumeContent();
+    });
+ 
+
+
 
   // ----------------------------------------------------------------
   // SENDING A MESSAGE

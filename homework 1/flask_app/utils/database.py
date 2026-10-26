@@ -26,7 +26,7 @@ DB_PATH = 'flask_app/database/resume.db'
 
 # Tables must be created in this order because of foreign key relationships.
 # For example, 'positions' references 'institutions', so institutions must exist first.
-TABLE_ORDER = ['institutions', 'positions', 'experiences', 'skills']
+TABLE_ORDER = ['institutions', 'positions', 'experiences', 'skills', 'llm_roles']
 
 
 class database:
@@ -71,6 +71,7 @@ class database:
         """
         # Connect to the database file (creates it if it doesn't exist)
         connection = sqlite3.connect(self.db_path)
+        connection.execute("PRAGMA foreign_keys = ON")
 
         # row_factory lets us access columns by name: row['title']
         # instead of by index: row[0]
@@ -276,3 +277,20 @@ class database:
                         lines.append(f"      Skill: {skill['name']} (level {skill['skill_level']}/10)")
 
         return '\n'.join(lines)
+
+    def getLLMRoles(self):
+      rows = self.query("SELECT * FROM llm_roles")
+      return {row['role']: row for row in rows}
+
+    def insertRows(self, table, columns, values):
+      value_sql, bound_params = [], []
+      for value in values:
+        if isinstance(value, str) and value.strip().startswith("(SELECT"):
+            value_sql.append(value)
+        else:
+            value_sql.append("?")
+            bound_params.append(value)
+      sql = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join(value_sql)})"
+      self.query(sql, tuple(bound_params))
+
+    

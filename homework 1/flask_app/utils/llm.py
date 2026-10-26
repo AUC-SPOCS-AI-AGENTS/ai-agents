@@ -16,6 +16,7 @@ KEY CONCEPTS:
 
 import os
 import requests
+import re
 
 # The URL we send our messages to.
 # OpenRouter acts as a single gateway to many different AI models.
@@ -69,6 +70,84 @@ def fill_template(role, domain, specific_instructions, request,
         few_shot_examples=few_shot_examples,
         request=request,
     ).strip()
+
+
+def handle_ai_chat_request(db, role, message):
+    if role is None:
+        return send_message(message)
+
+    config = db.getLLMRoles()[role]
+    background_context = config['background_context'] or ""
+    if role == "Content Expert":
+        background_context += "\n" + db.getResumeText()
+
+    system_prompt = fill_template(
+        role=config['role'],
+        domain=config['domain'],
+        specific_instructions=config['specific_instructions'],
+        background_context=background_context,
+        few_shot_examples=config['few_shot_examples'] or "",
+        request=message,
+    )
+    output = send_message(message, system_prompt).strip()
+    print(f"[{role}] generated:\n{output}\n")
+
+    if role == "Database Read Expert":
+        return execute_read_query(db, output)
+    if role == "Database Write Expert":
+        return execute_write_action(db, output)
+    if role == "Orchestrator":
+        return run_orchestrator_plan(db, message, output)
+    return output
+
+
+def execute_read_query(db, sql):
+    if not sql.strip().upper().startswith("SELECT"):
+        return "Sorry, I couldn't safely answer that question."
+    try:
+        return str(db.query(sql))
+    except Exception as error:
+        print(f"Read Expert query failed: {error}")
+        return "Sorry, that question couldn't be answered."
+
+
+def execute_write_action(db, generated_code):
+    local_vars = {}
+    try:
+        exec(generated_code, {"db": db, "NULL": None}, local_vars)
+    except Exception as error:
+        print(f"Write Expert code failed: {error}")
+        return "Operation was unsuccessful."
+    return local_vars.get("outcome", "Operation was unsuccessful.")
+
+
+def run_orchestrator_plan(db, original_request, plan_text):
+    try:
+        call_strings = eval(plan_text)
+    except Exception:
+        print(f"Orchestrator returned an unparseable plan: {plan_text}")
+        return "Sorry, I couldn't plan a response to that."
+
+    results = []
+    for call_string in call_strings:
+        print(f"[Orchestrator] executing: {call_string}")
+        match = re.search(r'role="([^"]*)",\s*message="([^"]*)"', call_string)
+        role, message = match.group(1), match.group(2)
+        response = handle_ai_chat_request(db, role, message)
+        results.append((role, message, response))
+
+    steps_summary = "\n".join(f"{r}: {resp}" for r, m, resp in results)
+    synthesis_prompt = (
+        f'The user asked: "{original_request}"\n\n'
+        f"Here is what each expert found or did:\n{steps_summary}\n\n"
+        "Write ONE short, clear reply. A Database Write Expert step's result "
+        "is already the exact message to show the user (e.g. 'New Python "
+        "added to the skills table.') -- if one is present, reuse it "
+        "verbatim rather than rephrasing it. Otherwise, summarize the "
+        "other results in plain language. Never mention SQL, Python, code, "
+        "or these internal steps."
+    )
+    return send_message(original_request, synthesis_prompt)
 
 
 
