@@ -64,5 +64,5 @@ def resume():
     #         flask_app/database/initial_data/
     #       Then restart the app to reload the database.
     """
-    resume_data = current_app.db.getResumeData()
+    resume_data = app.db.getResumeData()
     return render_template('resume.html', resume=resume_data)
