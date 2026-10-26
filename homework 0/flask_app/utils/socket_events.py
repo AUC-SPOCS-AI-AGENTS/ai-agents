@@ -21,9 +21,9 @@ HOW EVENTS WORK:
 from flask_socketio import emit
 from flask_app import socketio
 from flask_app.utils.llm import send_message
-
+from flask import current_app
 # This is set by create_app() in __init__.py so this file can use the database.
-db = None
+
 
 
 @socketio.on('send_message')
