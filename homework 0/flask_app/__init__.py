@@ -65,7 +65,7 @@ def create_app():
 
         # Inject the database into the routes and socket_events modules
         # so they can query it without creating a new connection each time.
-        routes.db = db
+        app.db = db
         socket_events.db = db
 
     # Prevent browsers from caching old versions of pages during development
