@@ -19,7 +19,7 @@ NOTE: Chat messages do NOT go through a route. They travel over a
       Read that file after this one to see how the chat works.
 """
 
-from flask import db
+from flask_app import db
 from flask import render_template
 
 # db is set by create_app() in __init__.py after the app is initialized.
