@@ -18,7 +18,7 @@ NOTE: Chat messages do NOT go through a route. They travel over a
       WebSocket connection handled in flask_app/utils/socket_events.py.
       Read that file after this one to see how the chat works.
 """
-
+from flask_app import db
 from flask import Blueprint
 
 from flask import render_template
