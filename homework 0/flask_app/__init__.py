@@ -60,7 +60,7 @@ def create_app():
     # Register routes and socket events inside the app context.
     # The app context makes app.config and other Flask globals available.
     with app.app_context():
-        from routs import main
+        from flask_app.routes import main
         app.register_blueprint(main)
         from flask_app.utils import socket_events
 
