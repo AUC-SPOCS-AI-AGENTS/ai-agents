@@ -61,7 +61,7 @@ def create_app():
     # The app context makes app.config and other Flask globals available.
     with app.app_context():
         from flask_app.routs import main
-      app.register_blueprint(main)
+        app.register_blueprint(main)
         from flask_app.utils import socket_events
 
         # Inject the database into the routes and socket_events modules
