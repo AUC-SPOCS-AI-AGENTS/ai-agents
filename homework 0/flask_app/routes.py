@@ -19,9 +19,11 @@ NOTE: Chat messages do NOT go through a route. They travel over a
       Read that file after this one to see how the chat works.
 """
 
+from flask import Blueprint
 
 from flask import render_template
 
+main = Blueprint ('main', __name__)
 # db is set by create_app() in __init__.py after the app is initialized.
 # It gives every route access to the database without creating a new
 # connection on each request.
@@ -32,7 +34,7 @@ from flask import render_template
 # HOME PAGE
 # ------------------------------------------------------------------
 
-@app.route('/')
+@main.route('/')
 def home():
     """
     Render the homepage.
@@ -47,7 +49,7 @@ def home():
 # RESUME PAGE
 # ------------------------------------------------------------------
 
-@app.route('/resume')
+@main.route('/resume')
 def resume():
     """
     Render the resume page with live data from the database.
