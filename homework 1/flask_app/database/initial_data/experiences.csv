@@ -1,0 +1,5 @@
+"experience_id","position_id","name","description","hyperlink","start_date","end_date"
+"1","3","RateUp","Developed a Django-based movie review application that allows users to explore movies, rate them, and share reviews. Built a responsive interface using HTML, CSS, Bootstrap, and JavaScript, with user authentication and rating features.",NULL,NULL,NULL
+"2","3","Kiddy Bank","Developed a gamified financial education web application for children using Django, HTML, CSS, Bootstrap, and JavaScript. Implemented authentication, savings goal tracking, and a rewards system.",NULL,NULL,NULL
+"3","3","Portfolio Website","Built a responsive personal portfolio website using HTML, CSS, and vanilla JavaScript to showcase projects, skills, and contact information.",NULL,NULL,NULL
+"4","3","Login & Registration System","Built a Django-based login and registration system with server-side validation, password hashing, session management, and client-side JavaScript validation.",NULL,NULL,NULL
