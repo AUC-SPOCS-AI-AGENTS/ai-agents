@@ -1,0 +1,4 @@
+"inst_id","type","name","department","address","city","state","zip"
+"1","Education","Azhar University – Gaza","Computer Software Engineering",NULL,"Gaza","Palestine",NULL
+"2","Training","Axsos Academy","Full Stack Development Bootcamp",NULL,"Palestine","Palestine",NULL
+"3","Projects","Personal & Academic Projects","Software Development",NULL,"Cairo","Egypt",NULL

@@ -1,5 +1,4 @@
 "position_id","inst_id","title","responsibilities","start_date","end_date"
-"1","1","Instructor","Teach classes; mostly NLP and Web design.","2019-01-01",NULL
-"2","1","Researcher","Perform research at interface of AI and healthcare.","2019-01-01",NULL
-"3","2","National Scholar","Helped the government plan the future of science","2021-01-01","2021-12-31"
-"4","3","Associate Director","Used data science to assess corporation and nations","2019-01-01","2020-01-01"
+"1","1","Bachelor's Degree in Computer Software Engineering","Studied software engineering, including data structures and algorithms, object-oriented programming, databases, operating systems, software engineering, web development, mobile application development, and system architecture.","2019-01-01","2024-12-31"
+"2","2","Full Stack Developer Bootcamp Trainee","Completed a 20-week bootcamp with 660+ coding hours covering web fundamentals, Python, algorithms, data structures, and individual and team projects.","2025-01-01","2025-12-31"
+"3","3","Full Stack Developer – Projects","Developed academic and personal web applications using Django, Python, JavaScript, HTML, CSS, Bootstrap, and SQL.","2025-01-01",NULL
