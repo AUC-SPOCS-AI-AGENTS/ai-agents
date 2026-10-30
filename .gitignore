@@ -1,0 +1,10 @@
+.env
+.env.local
+venv/
+*.txt
+.vscode
+.idea
+.pytest_cache
+__pycache__
+*.db
+.DS_Store
