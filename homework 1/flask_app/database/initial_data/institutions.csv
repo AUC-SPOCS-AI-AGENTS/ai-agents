@@ -1,0 +1,4 @@
+"inst_id","type","name","department","address","city","state","zip"
+"1","Academia","Cairo University","Computer Science",NULL,"Cairo","Egypt",NULL
+"2","Tech","Google Developer Student Club",NULL,NULL,"Cairo","Egypt",NULL
+"3","Writer","Co-author","Organizing",NULL,"Cairo","Egypt",NULL
