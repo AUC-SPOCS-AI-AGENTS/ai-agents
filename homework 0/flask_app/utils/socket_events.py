@@ -21,9 +21,9 @@ HOW EVENTS WORK:
 from flask_socketio import emit
 from flask_app import socketio
 from flask_app.utils.llm import send_message
-
+from flask import current_app
 # This is set by create_app() in __init__.py so this file can use the database.
-db = None
+
 
 
 @socketio.on('send_message')
@@ -59,7 +59,7 @@ def handle_message(data):
     # If anything goes wrong (bad key, no internet, API error), we catch the
     # exception and emit a helpful error message instead of hanging silently.
     try:
-        ai_response = send_message(user_message, system_prompt)
+        ai_response = send_message(user_message, current_app.dp)
     except Exception as error:
         print(f"LLM error: {error}")
         ai_response = f"⚠️ Could not reach the AI: {error}"
