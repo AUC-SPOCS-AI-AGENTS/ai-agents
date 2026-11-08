@@ -6,7 +6,7 @@ Use this file to explain 3 different prompt engineering concepts that you tried 
 #### 1. Few-shot examples
 The Orchestrator's example had no quotes so the AI wrote `role=Content Expert` instead of `role="Content Expert"`, and the app crashed.
  I fix the example and added one example for each expert.
- Worked. The AI copies the examples more than the instructions.
+ Worked.
 
 #### 2. (constraints)
  The Read Expert searched with `name = 'INARA'`, but the database has `INARA Organization | Gaza`, so it found nothing.
