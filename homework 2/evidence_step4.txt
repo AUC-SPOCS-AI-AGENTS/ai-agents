@@ -1,0 +1,89 @@
+﻿New database: loading resume data from CSV files
+  Loaded data for table: institutions
+  Loaded data for table: positions
+  Loaded data for table: experiences
+  Loaded data for table: skills
+  Loaded data for table: llm_roles
+Test database: {'embedded': 20, 'removed': 0, 'unchanged': 0}
+
+######################################################################
+USER: Find my MSU experience
+[Orchestrator] generated:
+{"route": "semantic","reason": "MSU is an abbreviation; stored name may differ","steps":[{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions"]}]}
+
+[trace 6ce29d] route = semantic | reason: MSU is an abbreviation; stored name may differ
+[trace 6ce29d] search by meaning: 'MSU' in ['institutions'] (cut-off 0.5)
+[trace 6ce29d]    0.648  institutions #1  Michigan State University, Computer Science, East Lansing, M  (MATCH)
+[trace 6ce29d]    0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+[trace 6ce29d]    0.136  institutions #3  Standard and Poor's Financial Services, Ratings, New York Ci  (below cut-off)
+[trace 6ce29d] outcome: replied (1 step(s) ran)
+REPLY: Your MSU experience is related to Michigan State University, specifically in the field of Computer Science, located in East Lansing, Michigan.
+
+######################################################################
+USER: What AI skills do I have?
+[Orchestrator] generated:
+{"route": "semantic","reason": "category, no skill is literally called AI skills","steps":[{"expert": "Semantic Search", "query": "AI skills", "tables": ["skills"]}]}
+
+[trace 0c0a2a] route = semantic | reason: category, no skill is literally called AI skills
+[trace 0c0a2a] search by meaning: 'AI skills' in ['skills'] (cut-off 0.5)
+[trace 0c0a2a]    0.623  skills #5  Skill: Machine Learning  (MATCH)
+[trace 0c0a2a]    0.594  skills #6  Skill: Neural Networks  (MATCH)
+[trace 0c0a2a]    0.473  skills #1  Skill: Javascript  (below cut-off)
+[trace 0c0a2a]    0.449  skills #2  Skill: Python  (below cut-off)
+[trace 0c0a2a]    0.433  skills #3  Skill: HTML  (below cut-off)
+[trace 0c0a2a] outcome: replied (1 step(s) ran)
+REPLY: Based on the information available, you have skills in Machine Learning and Neural Networks.
+
+######################################################################
+USER: List all my skills
+[Orchestrator] generated:
+{"route": "sql", "reason": "list everything, no fuzzy words", "steps": [{"expert": "Database Read Expert", "message": "List all skills"}]}
+
+[trace fc9d5e] route = sql | reason: list everything, no fuzzy words
+[trace fc9d5e] step 1: Database Read Expert <- 'List all skills'
+[Database Read Expert] generated:
+SELECT name, skill_level FROM skills;
+
+[trace fc9d5e] step 1: result: [{'name': 'Javascript', 'skill_level': 7}, {'name': 'Python', 'skill_level': 10}, {'name': 'HTML', 'skill_level': 9}, {'
+[trace fc9d5e] outcome: replied (1 step(s) ran)
+REPLY: Your skills are:
+
+- Javascript (Level 7)
+- Python (Level 10)
+- HTML (Level 9)
+- CSS (Level 5)
+- Machine Learning (Level 8)
+- Neural Networks (Level 7)
+- Public Speaking (Level 6)
+
+######################################################################
+USER: What did I do at MSU?
+[Orchestrator] generated:
+{"route": "semantic_then_sql", "reason": "resolve the abbreviation first, then look up positions there", "steps": [{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions"]}, {"expert": "Database Read Expert", "message": "List the positions at the institution found in the previous step"}]}
+
+[trace 18f37f] route = semantic_then_sql | reason: resolve the abbreviation first, then look up positions there
+[trace 18f37f] search by meaning: 'MSU' in ['institutions'] (cut-off 0.5)
+[trace 18f37f]    0.649  institutions #1  Michigan State University, Computer Science, East Lansing, M  (MATCH)
+[trace 18f37f]    0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+[trace 18f37f]    0.136  institutions #3  Standard and Poor's Financial Services, Ratings, New York Ci  (below cut-off)
+[trace 18f37f] step 2: Database Read Expert <- 'List the positions at the institution found in the previous step'
+[Database Read Expert] generated:
+SELECT p.title, p.start_date, p.end_date FROM positions p JOIN institutions i ON p.inst_id = i.inst_id WHERE i.name = 'Michigan State University';
+
+[trace 18f37f] step 2: result: [{'title': 'Instructor', 'start_date': '2019-01-01', 'end_date': None}, {'title': 'Researcher', 'start_date': '2019-01-0
+[trace 18f37f] outcome: replied (2 step(s) ran)
+REPLY: At MSU, you worked as an Instructor and a Researcher starting from January 1, 2019.
+
+######################################################################
+USER: Find my Harvard experience
+[Orchestrator] generated:
+{"route": "semantic", "reason": "Harvard is an institution; stored name may differ", "steps": [{"expert": "Semantic Search", "query": "Harvard", "tables": ["institutions"]}]}
+
+[trace 147836] route = semantic | reason: Harvard is an institution; stored name may differ
+[trace 147836] search by meaning: 'Harvard' in ['institutions'] (cut-off 0.5)
+[trace 147836]    0.273  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+[trace 147836]    0.254  institutions #1  Michigan State University, Computer Science, East Lansing, M  (below cut-off)
+[trace 147836]    0.227  institutions #3  Standard and Poor's Financial Services, Ratings, New York Ci  (below cut-off)
+[trace 147836] step 1: nothing found -> stop, reply 'not found'
+[trace 147836] outcome: replied (1 step(s) ran)
+REPLY: NOT FOUND: nothing in the resume matches 'Harvard'.

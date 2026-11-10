@@ -1,0 +1,271 @@
+﻿Test data loaded from fixtures/: {'embedded': 20, 'removed': 0, 'unchanged': 0}
+S1   PASS  [API]  Find my MSU experience  ->  Michigan State University is a MATCH with its score in the trace
+      trace:
+      USER: Find my MSU experience
+      [trace 08f142] user: 'Find my MSU experience'
+      [Orchestrator] generated:
+      {"route": "semantic","reason": "MSU is an abbreviation; stored name may differ","steps":[{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions"]}]}
+      
+      [trace 08f142] route = semantic | reason: MSU is an abbreviation; stored name may differ
+      [trace 08f142] search by meaning: 'MSU' in ['institutions'] (cut-off 0.5)
+      [trace 08f142]    0.648  institutions #1  Michigan State University, Computer Science, East Lansing, M  (MATCH)
+      [trace 08f142]    0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+      [trace 08f142]    0.136  institutions #3  Standard and Poor's Financial Services, Ratings, New York Ci  (below cut-off)
+      [trace 08f142] outcome: replied (1 step(s) ran)
+      [trace 08f142] approval: none
+      AGENT: Your MSU experience is listed as Michigan State University, Computer Science, East Lansing, Michigan.
+      
+S2   PASS  [API]  What AI skills do I have?  ->  Machine Learning matched=True, Public Speaking matched=False
+      trace:
+      USER: What AI skills do I have?
+      [trace 15924b] user: 'What AI skills do I have?'
+      [Orchestrator] generated:
+      {"route": "semantic","reason": "category, no skill is literally called AI skills","steps":[{"expert": "Semantic Search", "query": "AI skills", "tables": ["skills"]}]}
+      
+      [trace 15924b] route = semantic | reason: category, no skill is literally called AI skills
+      [trace 15924b] search by meaning: 'AI skills' in ['skills'] (cut-off 0.5)
+      [trace 15924b]    0.623  skills #5  Skill: Machine Learning  (MATCH)
+      [trace 15924b]    0.594  skills #6  Skill: Neural Networks  (MATCH)
+      [trace 15924b]    0.473  skills #1  Skill: Javascript  (below cut-off)
+      [trace 15924b]    0.449  skills #2  Skill: Python  (below cut-off)
+      [trace 15924b]    0.433  skills #3  Skill: HTML  (below cut-off)
+      [trace 15924b] outcome: replied (1 step(s) ran)
+      [trace 15924b] approval: none
+      AGENT: You have skills in Machine Learning and Neural Networks.
+      
+S3   PASS  [API]  List all my skills -> Read Expert  ->  route = sql (Database Read Expert), no search by meaning
+      trace:
+      USER: List all my skills
+      [trace 34f0d6] user: 'List all my skills'
+      [Orchestrator] generated:
+      {"route": "sql", "reason": "list everything, no fuzzy words", "steps": [{"expert": "Database Read Expert", "message": "List all skills"}]}
+      
+      [trace 34f0d6] route = sql | reason: list everything, no fuzzy words
+      [trace 34f0d6] step 1: Database Read Expert <- 'List all skills'
+      [Database Read Expert] generated:
+      SELECT name, skill_level FROM skills;
+      
+      [trace 34f0d6] step 1: result: [{'name': 'Javascript', 'skill_level': 7}, {'name': 'Python', 'skill_level': 10}, {'name': 'HTML', 'skill_level': 9}, {'
+      [trace 34f0d6] outcome: replied (1 step(s) ran)
+      [trace 34f0d6] approval: none
+      AGENT: Your skills are as follows:
+      
+      - Javascript (Skill level: 7)
+      - Python (Skill level: 10)
+      - HTML (Skill level: 9)
+      - CSS (Skill level: 5)
+      - Machine Learning (Skill level: 8)
+      - Neural Networks (Skill level: 7)
+      - Public Speaking (Skill level: 6)
+      
+S4   PASS  [API]  What did I do at MSU? (two steps)  ->  step 1 search resolved MSU; step 2 SQL used 'Michigan State University'
+      trace:
+      USER: What did I do at MSU?
+      [trace a2c56e] user: 'What did I do at MSU?'
+      [Orchestrator] generated:
+      {"route": "semantic_then_sql", "reason": "resolve the abbreviation first, then look up positions there", "steps": [{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions"]}, {"expert": "Database Read Expert", "message": "List the positions at the institution found in the previous step"}]}
+      
+      [trace a2c56e] route = semantic_then_sql | reason: resolve the abbreviation first, then look up positions there
+      [trace a2c56e] search by meaning: 'MSU' in ['institutions'] (cut-off 0.5)
+      [trace a2c56e]    0.648  institutions #1  Michigan State University, Computer Science, East Lansing, M  (MATCH)
+      [trace a2c56e]    0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+      [trace a2c56e]    0.135  institutions #3  Standard and Poor's Financial Services, Ratings, New York Ci  (below cut-off)
+      [trace a2c56e] step 2: Database Read Expert <- 'List the positions at the institution found in the previous step'
+      [Database Read Expert] generated:
+      SELECT p.title, p.start_date, p.end_date FROM positions p JOIN institutions i ON p.inst_id = i.inst_id WHERE i.name = 'Michigan State University';
+      
+      [trace a2c56e] step 2: result: [{'title': 'Instructor', 'start_date': '2019-01-01', 'end_date': None}, {'title': 'Researcher', 'start_date': '2019-01-0
+      [trace a2c56e] outcome: replied (2 step(s) ran)
+      [trace a2c56e] approval: none
+      AGENT: At MSU, you worked as an Instructor and a Researcher, starting in January 2019.
+      
+S5   PASS  [API]  Add a skill, restart, still there + searchable  ->  after restart: row=True, embedding=True, top search result='Skill: Kubernetes'
+      trace:
+      USER: Add Kubernetes to BRAINWORKS
+      [trace 304ca5] user: 'Add Kubernetes to BRAINWORKS'
+      [Orchestrator] generated:
+      {"route": "write", "reason": "the user wants to add data", "steps": [{"expert": "Database Write Expert", "message": "Add Kubernetes as a skill to the BRAINWORKS experience"}]}
+      
+      [trace 304ca5] route = write | reason: the user wants to add data
+      [trace 304ca5] step 1: Database Write Expert <- 'Add Kubernetes as a skill to the BRAINWORKS experience'
+      [Database Write Expert] generated:
+      {"operation": "add_skill", "args": {"skill_name": "Kubernetes", "experience_name": "BRAINWORKS"}}
+      
+      [trace 304ca5] write proposed: add_skill(skill_name='Kubernetes', experience_name='BRAINWORKS') | destructive=False
+      [trace 304ca5] write done (safe operation): Added skill 'Kubernetes' to experience 'BRAINWORKS', level 5 (default; ask me to change it).
+      [trace 304ca5] step 1: result: Added skill 'Kubernetes' to experience 'BRAINWORKS', level 5 (default; ask me to change it).
+      [trace 304ca5] outcome: replied (1 step(s) ran)
+      [trace 304ca5] approval: none
+      AGENT: Added skill 'Kubernetes' to experience 'BRAINWORKS', level 5 (default; ask me to change it).
+      
+S6   PASS  [API]  Deletion, then no  ->  exact action shown; after 'no' the skills are unchanged
+      trace:
+      USER: Remove Python from CSE 847
+      [trace 1f609e] user: 'Remove Python from CSE 847'
+      [Orchestrator] generated:
+      {"route": "write", "reason": "the user wants to remove data", "steps": [{"expert": "Database Write Expert", "message": "Remove the skill Python from the CSE 847 experience"}]}
+      
+      [trace 1f609e] route = write | reason: the user wants to remove data
+      [trace 1f609e] step 1: Database Write Expert <- 'Remove the skill Python from the CSE 847 experience'
+      [Database Write Expert] generated:
+      {"operation": "delete_skill", "args": {"skill_name": "Python", "experience_name": "CSE 847"}}
+      
+      [trace 1f609e] write proposed: delete_skill(skill_name='Python', experience_name='CSE 847') | destructive=True
+      [trace 1f609e] approval: WAITING for yes/no -> delete_skill(skill_name='Python', experience_name='CSE 847') (action 08fc65)
+      AGENT: This will delete skill 'Python' from experience 'CSE 847'. Reply yes or no.
+      
+      USER: no
+      [trace 34c953] user: 'no'
+      [trace 34c953] approval: CANCELLED by 'no' -> delete_skill(skill_name='Python', experience_name='CSE 847') not run
+      AGENT: Cancelled. Nothing was changed.
+      
+S7   PASS  [API]  Deletion, then yes  ->  removed after 'yes': ['Python']
+      trace:
+      USER: Remove Python from CSE 847
+      [trace 605325] user: 'Remove Python from CSE 847'
+      [Orchestrator] generated:
+      {"route": "write", "reason": "the user wants to remove data", "steps": [{"expert": "Database Write Expert", "message": "Remove the skill Python from the CSE 847 experience"}]}
+      
+      [trace 605325] route = write | reason: the user wants to remove data
+      [trace 605325] step 1: Database Write Expert <- 'Remove the skill Python from the CSE 847 experience'
+      [Database Write Expert] generated:
+      {"operation": "delete_skill", "args": {"skill_name": "Python", "experience_name": "CSE 847"}}
+      
+      [trace 605325] write proposed: delete_skill(skill_name='Python', experience_name='CSE 847') | destructive=True
+      [trace 605325] approval: WAITING for yes/no -> delete_skill(skill_name='Python', experience_name='CSE 847') (action 3d7e2f)
+      AGENT: This will delete skill 'Python' from experience 'CSE 847'. Reply yes or no.
+      
+      USER: yes
+      [trace 605a11] user: 'yes'
+      [trace 605a11] approval: APPROVED -> running exactly delete_skill(skill_name='Python', experience_name='CSE 847') (action 3d7e2f)
+      [trace 605a11] outcome: Done. Deleted 1 skill(s).
+      AGENT: Done. Deleted 1 skill(s).
+      
+S8   PASS  [API]  maybe / change subject  ->  'maybe' and a new subject both cancel; later 'yes' changes nothing
+      trace:
+      USER: Remove HTML from CSE 847
+      [trace 1bdc6c] user: 'Remove HTML from CSE 847'
+      [Orchestrator] generated:
+      {"route": "write", "reason": "the user wants to remove data", "steps": [{"expert": "Database Write Expert", "message": "Remove the skill HTML from the CSE 847 experience"}]}
+      
+      [trace 1bdc6c] route = write | reason: the user wants to remove data
+      [trace 1bdc6c] step 1: Database Write Expert <- 'Remove the skill HTML from the CSE 847 experience'
+      [Database Write Expert] generated:
+      {"operation": "delete_skill", "args": {"skill_name": "HTML", "experience_name": "CSE 847"}}
+      
+      [trace 1bdc6c] write proposed: delete_skill(skill_name='HTML', experience_name='CSE 847') | destructive=True
+      [trace 1bdc6c] approval: WAITING for yes/no -> delete_skill(skill_name='HTML', experience_name='CSE 847') (action 16b071)
+      AGENT: This will delete skill 'HTML' from experience 'CSE 847'. Reply yes or no.
+      
+      USER: maybe
+      [trace 417f1b] user: 'maybe'
+      [trace 417f1b] approval: CANCELLED (unclear answer 'maybe') -> delete_skill(skill_name='HTML', experience_name='CSE 847') not run
+      AGENT: I need a clear 'yes' or 'no', so I cancelled it. Nothing was changed. Send the request again if you still want it.
+      
+      USER: yes
+      [trace 897f5d] user: 'yes'
+      [trace 897f5d] approval: none (nothing was waiting)
+      AGENT: There is nothing waiting for your approval right now.
+      
+      USER: Remove HTML from CSE 847
+      [trace 137337] user: 'Remove HTML from CSE 847'
+      [Orchestrator] generated:
+      {"route": "write", "reason": "the user wants to remove data", "steps": [{"expert": "Database Write Expert", "message": "Remove the skill HTML from the CSE 847 experience"}]}
+      
+      [trace 137337] route = write | reason: the user wants to remove data
+      [trace 137337] step 1: Database Write Expert <- 'Remove the skill HTML from the CSE 847 experience'
+      [Database Write Expert] generated:
+      {"operation": "delete_skill", "args": {"skill_name": "HTML", "experience_name": "CSE 847"}}
+      
+      [trace 137337] write proposed: delete_skill(skill_name='HTML', experience_name='CSE 847') | destructive=True
+      [trace 137337] approval: WAITING for yes/no -> delete_skill(skill_name='HTML', experience_name='CSE 847') (action ee5f77)
+      AGENT: This will delete skill 'HTML' from experience 'CSE 847'. Reply yes or no.
+      
+      USER: How many skills do I have?
+      [trace 7449bb] user: 'How many skills do I have?'
+      [trace 7449bb] approval: CANCELLED (user moved on) -> delete_skill(skill_name='HTML', experience_name='CSE 847') not run
+      [Orchestrator] generated:
+      {"route": "sql", "reason": "exact count", "steps": [{"expert": "Database Read Expert", "message": "How many skills do I have?"}]}
+      
+      [trace 7449bb] route = sql | reason: exact count
+      [trace 7449bb] step 1: Database Read Expert <- 'How many skills do I have?'
+      [Database Read Expert] generated:
+      SELECT COUNT(*) AS skill_count FROM skills;
+      
+      [trace 7449bb] step 1: result: [{'skill_count': 7}]
+      [trace 7449bb] outcome: replied (1 step(s) ran)
+      [trace 7449bb] approval: none
+      AGENT: You have 7 skills.
+      
+      USER: yes
+      [trace dc0736] user: 'yes'
+      [trace dc0736] approval: none (nothing was waiting)
+      AGENT: There is nothing waiting for your approval right now.
+      
+S9   PASS  [API]  Clean up my skills so the list is empty  ->  paused=True (delete_all_skills), skills unchanged=True
+      trace:
+      USER: Clean up my skills so the list is empty
+      [trace cf0e2d] user: 'Clean up my skills so the list is empty'
+      [Orchestrator] generated:
+      {"route": "write", "reason": "the user wants to remove data", "steps": [{"expert": "Database Write Expert", "message": "Clear all skills from the skills list"}]}
+      
+      [trace cf0e2d] route = write | reason: the user wants to remove data
+      [trace cf0e2d] step 1: Database Write Expert <- 'Clear all skills from the skills list'
+      [Database Write Expert] generated:
+      {"operation": "delete_all_skills", "args": {}}
+      
+      [trace cf0e2d] write proposed: delete_all_skills() | destructive=True
+      [trace cf0e2d] approval: WAITING for yes/no -> delete_all_skills() (action 017942)
+      AGENT: This will delete ALL 7 skills: Javascript, Python, HTML, CSS, Machine Learning, Neural Networks, Public Speaking. Reply yes or no.
+      
+      USER: no
+      [trace c3ff80] user: 'no'
+      [trace c3ff80] approval: CANCELLED by 'no' -> delete_all_skills() not run
+      AGENT: Cancelled. Nothing was changed.
+      
+S10  PASS  [API]  Embedding call fails  ->  clear error=True, bad vectors stored=0, works afterwards=True
+      trace:
+      USER: Find my MSU experience
+      [trace 015830] user: 'Find my MSU experience'
+      [Orchestrator] generated:
+      {"route": "semantic","reason": "MSU is an abbreviation; stored name may differ","steps":[{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions"]}]}
+      
+      [trace 015830] route = semantic | reason: MSU is an abbreviation; stored name may differ
+      [trace 015830] search by meaning: 'MSU' in ['institutions'] (cut-off 0.5)
+      [trace 015830] step 1: search FAILED: embedding API error (400): Model this-model-does-not-exist/for-s10 does not exist
+      [trace 015830] approval: none
+      AGENT: ظأبي╕ Search by meaning is not available right now (embedding API error (400): Model this-model-does-not-exist/for-s10 does not exist). I did not guess an answer.
+      
+      USER: Find my MSU experience
+      [trace 49eeb7] user: 'Find my MSU experience'
+      [Orchestrator] generated:
+      {"route": "semantic", "reason": "MSU is an abbreviation; stored name may differ", "steps": [{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions"]}]}
+      
+      [trace 49eeb7] route = semantic | reason: MSU is an abbreviation; stored name may differ
+      [trace 49eeb7] search by meaning: 'MSU' in ['institutions'] (cut-off 0.5)
+      [trace 49eeb7]    0.648  institutions #1  Michigan State University, Computer Science, East Lansing, M  (MATCH)
+      [trace 49eeb7]    0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+      [trace 49eeb7]    0.135  institutions #3  Standard and Poor's Financial Services, Ratings, New York Ci  (below cut-off)
+      [trace 49eeb7] outcome: replied (1 step(s) ran)
+      [trace 49eeb7] approval: none
+      AGENT: Your MSU experience is related to Michigan State University, specifically in the field of Computer Science located in East Lansing, Michigan.
+      
+S11  PASS  [API]  Find my Harvard experience  ->  no match above the cut-off; reply: "NOT FOUND: nothing in the resume matches 'Harvard'."
+      trace:
+      USER: Find my Harvard experience
+      [trace e88ec3] user: 'Find my Harvard experience'
+      [Orchestrator] generated:
+      {"route": "semantic", "reason": "Harvard is an institution name; stored name may differ", "steps": [{"expert": "Semantic Search", "query": "Harvard", "tables": ["institutions"]}]}
+      
+      [trace e88ec3] route = semantic | reason: Harvard is an institution name; stored name may differ
+      [trace e88ec3] search by meaning: 'Harvard' in ['institutions'] (cut-off 0.5)
+      [trace e88ec3]    0.273  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+      [trace e88ec3]    0.254  institutions #1  Michigan State University, Computer Science, East Lansing, M  (below cut-off)
+      [trace e88ec3]    0.227  institutions #3  Standard and Poor's Financial Services, Ratings, New York Ci  (below cut-off)
+      [trace e88ec3] step 1: nothing found -> stop, reply 'not found'
+      [trace e88ec3] outcome: replied (1 step(s) ran)
+      [trace e88ec3] approval: none
+      AGENT: NOT FOUND: nothing in the resume matches 'Harvard'.
+      
+
+11/11 scenarios passed
