@@ -9,11 +9,20 @@ Flow for every chat message (handle_chat):
      result, which is what makes two-step requests work.
   4. One final model call turns the results into a short, honest reply.
   5. A trace is printed in the terminal for every message.
+
+Changes to the data (Phase 5):
+  - The Write Expert returns JSON naming ONE allowed operation
+    (see write_actions.py). Model output is never run as code.
+  - A destructive action is NOT run. It is stored as the session's
+    pending action and shown to the user: "... Reply yes or no."
+  - The next message decides: "yes" runs exactly that stored action,
+    "no" cancels, anything else cancels too (see handle_pending).
 """
 
 import json
 import os
 import re
+import sqlite3
 import uuid
 
 import requests
@@ -21,6 +30,8 @@ from jinja2 import Template
 
 from flask_app.utils.embeddings import EmbeddingError
 from flask_app.utils.semantic_search import semantic_search, SEARCHABLE_TABLES
+from flask_app.utils.write_actions import (ActionError, parse_action, prepare_action,
+                                           perform_action, classify_reply)
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-4o-mini"   # used when CHAT_MODEL is not set in .env
@@ -232,12 +243,19 @@ def run_semantic_step(db, step, trace):
 
 
 def execute_read_query(db, sql, trace):
-    """Run the Read Expert's SQL. Only a single SELECT is allowed."""
-    if not sql.strip().upper().startswith("SELECT"):
+    """
+    Run the Read Expert's SQL. Only a single SELECT is allowed, and it runs
+    on a READ-ONLY connection, so even a tricky query can't change data.
+    """
+    if not sql.strip().upper().startswith(("SELECT", "WITH")):
         trace.log("read", "REFUSED: not a SELECT")
         return "Sorry, I couldn't safely answer that question."
     try:
-        rows = db.query(sql)
+        path = os.path.abspath(db.db_path).replace("\\", "/")
+        connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        connection.row_factory = sqlite3.Row
+        rows = [dict(row) for row in connection.execute(sql).fetchall()]
+        connection.close()
     except Exception as error:
         trace.log("read", f"FAILED: {error}")
         return "Sorry, that question couldn't be answered."
@@ -245,25 +263,36 @@ def execute_read_query(db, sql, trace):
     return str(rows) if rows else "NOT FOUND: the query returned no rows."
 
 
-def execute_write_action(db, generated_code, trace):
+def propose_write_action(db, output, trace):
     """
-    TEMPORARY (Phase 4): still the HW1 exec() version.
-    Phase 5 replaces this with allowed operations + approval.
+    Turn the Write Expert's JSON into a checked Action.
+    Returns (result_text, action_waiting_for_approval or None).
     """
-    local_vars = {}
     try:
-        exec(generated_code, {"db": db, "NULL": None}, local_vars)
+        operation, values = parse_action(output)
+        action = prepare_action(db, operation, values)
+    except ActionError as error:
+        trace.log("write", f"NOT DONE: {error}")
+        return f"NOT DONE: {error}", None
+
+    trace.log("write", f"proposed: {action.operation} | {action.description}")
+    if action.destructive:
+        return action.description, action          # don't run it - wait for yes
+    try:
+        return perform_action(db, action), None    # adding is not destructive
     except Exception as error:
         trace.log("write", f"FAILED: {error}")
-        return "Operation was unsuccessful."
-    return local_vars.get("outcome", "Operation was unsuccessful.")
+        return "Operation was unsuccessful. Nothing was changed.", None
 
 
 def run_step(db, step, previous_result, trace):
-    """Run one step. `previous_result` is what the step before it produced."""
+    """
+    Run one step. `previous_result` is what the step before it produced.
+    Returns (result_text, action_waiting_for_approval or None).
+    """
     expert = step["expert"]
     if expert == "Semantic Search":
-        return run_semantic_step(db, step, trace)
+        return run_semantic_step(db, step, trace), None
 
     message = step["message"]
     if previous_result:
@@ -274,12 +303,12 @@ def run_step(db, step, previous_result, trace):
     trace.log(expert.split()[1].lower() if expert.startswith("Database") else "content",
               f"generated: {output}")
     if output.startswith("⚠️"):
-        return output
+        return output, None
     if expert == "Database Read Expert":
-        return execute_read_query(db, output, trace)
+        return execute_read_query(db, output, trace), None
     if expert == "Database Write Expert":
-        return execute_write_action(db, output, trace)
-    return output                              # Content Expert
+        return propose_write_action(db, output, trace)
+    return output, None                        # Content Expert
 
 
 # --------------------------------------------------------------------------
@@ -296,14 +325,68 @@ def synthesize(user_message, results):
         "- If a result says NOT FOUND, clearly say it was not found. Never invent a record.\n"
         "- If a result starts with ERROR, say that search is unavailable right now.\n"
         "- If a Database Write Expert result is present, reuse it word for word.\n"
+        "- If a result starts with NOT DONE, say nothing was changed and why.\n"
         "- Never mention SQL, Python, code, scores or these internal steps."
     )
     return send_message(user_message, instructions)
 
 
-def handle_chat(db, user_message):
+# The action waiting for a yes, one per chat session (browser tab).
+PENDING_ACTIONS = {}
+
+# A reply this short is treated as an unclear answer, not as a new request.
+MAX_UNCLEAR_WORDS = 3
+
+
+def handle_pending(db, user_message, session_id, trace):
+    """
+    Called when an action is waiting. ANY message ends the wait (pop):
+      yes   -> run exactly the stored action, nothing else
+      no    -> cancel
+      other -> cancel. A short reply ("maybe", "hmm") just gets an answer;
+               a longer one is a new request (change of subject).
+    Returns the reply, or None if the message is a new request.
+    """
+    action = PENDING_ACTIONS.pop(session_id)
+    answer = classify_reply(user_message)
+
+    if answer == "yes":
+        trace.log("approval", f"approved: {action.description}")
+        try:
+            outcome = perform_action(db, action, approved=action)
+        except Exception as error:
+            trace.log("write", f"FAILED: {error}")
+            outcome = "Operation was unsuccessful. Nothing was changed."
+        trace.log("outcome", outcome)
+        return outcome
+
+    if answer == "no":
+        trace.log("approval", "cancelled: the user said no")
+        trace.log("outcome", "nothing was changed")
+        return "Cancelled. Nothing was changed."
+
+    if len(user_message.split()) <= MAX_UNCLEAR_WORDS:
+        trace.log("approval", "cancelled: unclear answer (not a clear yes)")
+        trace.log("outcome", "nothing was changed")
+        return ("That wasn't a clear yes, so I cancelled it. Nothing was changed. "
+                "Ask again if you still want it.")
+
+    trace.log("approval", "cancelled: the user changed the subject")
+    return None
+
+
+def handle_chat(db, user_message, session_id="default"):
     """Handle one chat message: plan -> check -> run steps -> reply, with a trace."""
     trace = Trace(user_message)
+
+    if session_id in PENDING_ACTIONS:
+        reply = handle_pending(db, user_message, session_id, trace)
+        if reply is not None:
+            return reply
+    elif classify_reply(user_message) in ("yes", "no"):
+        trace.log("approval", "none: nothing is waiting")
+        trace.log("outcome", "nothing was changed")
+        return "There is nothing waiting for your approval, so nothing was changed."
 
     plan_text = ask_expert(db, "Orchestrator", user_message)
     trace.log("plan", plan_text)
@@ -311,6 +394,7 @@ def handle_chat(db, user_message):
         route, reason, steps = parse_plan(plan_text)
     except ValueError as error:
         trace.log("plan", f"REJECTED: {error}")
+        trace.log("approval", "none")
         trace.log("outcome", "no steps were run")
         return "Sorry, I couldn't plan a response to that."
 
@@ -318,16 +402,23 @@ def handle_chat(db, user_message):
     results, previous_result = [], ""
     for number, step in enumerate(steps, start=1):
         trace.log("step", f"{number}/{len(steps)} {step['expert']}")
-        previous_result = run_step(db, step, previous_result, trace)
+        previous_result, waiting = run_step(db, step, previous_result, trace)
+        if waiting:
+            # Destructive: store the EXACT action and show it. Later steps don't run.
+            PENDING_ACTIONS[session_id] = waiting
+            trace.log("approval", f"waiting: {waiting.description}")
+            trace.log("outcome", "paused, nothing was changed yet")
+            return f"{waiting.description} Reply yes or no."
         results.append((step["expert"], previous_result))
 
+    trace.log("approval", "none")
     reply = synthesize(user_message, results)
     trace.log("outcome", reply.replace("\n", " ")[:150])
     return reply
 
 
-def handle_ai_chat_request(db, role, message):
+def handle_ai_chat_request(db, role, message, session_id="default"):
     """Kept for compatibility with socket_events.py (HW1 called this)."""
     if role == "Orchestrator":
-        return handle_chat(db, message)
+        return handle_chat(db, message, session_id)
     return send_message(message)
