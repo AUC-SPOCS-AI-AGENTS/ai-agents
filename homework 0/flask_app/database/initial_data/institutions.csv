@@ -1,4 +1,15 @@
 "inst_id","type","name","department","address","city","state","zip"
-"1","Academia","Michigan State University","Computer Science",NULL,"East Lansing","Michigan",NULL
-"2","Government","National Institutes of Health",NULL,NULL,"Bethesda","Maryland",NULL
-"3","Industry","Standard and Poor's Financial Services","Ratings",NULL,"New York City","New York",NULL
+"1","EDUCATION","Cairo University - International Branch, Egypt",NULL,NULL,NULL,NULL,NULL
+"2","EDUCATION","University College of Applied Sciences (UCAS), Gaza",NULL,NULL,NULL,NULL,NULL
+"3","EXPERIENCE","INARA Organization | Gaza",NULL,NULL,NULL,NULL,NULL
+"4","EXPERIENCE","Global Empowerment Mission (GEM) | Gaza / Egypt",NULL,NULL,NULL,NULL,NULL
+"5","EXPERIENCE","AI Finance Hackathon (Google & nsave) | Cairo",NULL,NULL,NULL,NULL,NULL
+"6","EXPERIENCE","Gaza Sky Geeks (Banat Geeks Program)",NULL,NULL,NULL,NULL,NULL
+"7","LEADERSHIP & ACTIVITIES","Google Developer Student Club (GDSC), Cairo University",NULL,NULL,NULL,NULL,NULL
+"8","LEADERSHIP & ACTIVITIES","Nawa for Culture and Arts Association | Gaza",NULL,NULL,NULL,NULL,NULL
+"9","LEADERSHIP & ACTIVITIES","Voice Over Training (Remote)",NULL,NULL,NULL,NULL,NULL
+"10","PROJECTS & PUBLICATIONS","The Slaughter of the Innocents",NULL,NULL,NULL,NULL,NULL
+"11","PROJECTS & PUBLICATIONS","Startup Without Borders Summit | Cairo",NULL,NULL,NULL,NULL,NULL
+"12","","TECHNICAL SKILLS",NULL,NULL,NULL,NULL,NULL
+"13","","CERTIFICATIONS",NULL,NULL,NULL,NULL,NULL
+"14","","ADDITIONAL ACTIVITIES",NULL,NULL,NULL,NULL,NULL  

@@ -63,7 +63,7 @@
 
         <div class="position-header">
           <h3>{{ position.title }}</h3>
-          <span class="date-range">{{ position.start_date }} – {{ position.end_date }}</span>
+          {% if position.start_date %}<span class="date-range">{{ position.start_date }} – {{ position.end_date }}</span>{% endif %}
         </div>
         <p class="responsibilities">{{ position.responsibilities }}</p>
 

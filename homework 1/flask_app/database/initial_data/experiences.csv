@@ -1,0 +1,17 @@
+"experience_id","position_id","name","description","hyperlink","start_date","end_date"
+"1","12","Programming","Python, C++, HTML/CSS, SQL",NULL,NULL,NULL
+"2","12","AI & Data Tools","TensorFlow, Pandas, NumPy",NULL,NULL,NULL
+"3","12","Other Skills","Problem-solving, research, teamwork, project coordination",NULL,NULL,NULL
+"4","12","Languages","Arabic (Native), English (Advanced - B2)",NULL,NULL,NULL
+"5","13","Google AI Fundamentals","Google",NULL,NULL,NULL
+"6","13","Programming Essential in Python","Python Institute",NULL,NULL,NULL
+"7","13","Intro to AI Ethics","Kaggle",NULL,NULL,NULL
+"8","13","Introduction to Image Generation with Google Cloud","Udacity",NULL,NULL,NULL
+"9","13","Generative AI with Google Cloud","Udacity",NULL,NULL,NULL
+"10","13","Encoder-Decoder Architecture with Google Cloud","Udacity",NULL,NULL,NULL
+"11","13","JavaScript Complete Course","Udemy",NULL,NULL,NULL
+"12","13","Cisco Networking Basics","Cisco",NULL,NULL,NULL
+"13","13","Voice Over Training","Professional Course",NULL,NULL,NULL
+"14","13","SQL for Data Science","Coursera (In Progress - 2026)",NULL,NULL,NULL
+"15","14","Chess Club Leader","Organized competitions and strategy sessions",NULL,NULL,NULL
+"16","14","Interests","Ethical AI, Open Source, and Social Impact Technology",NULL,NULL,NULL
