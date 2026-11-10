@@ -1,41 +1,72 @@
 """
-llm.py — sends messages to an AI language model via the OpenRouter API.
+llm.py - the AI side of the resume agent (Homework 2 version).
 
-This file is the bridge between your Flask app and an AI model (GPT-3.5).
-When a student types a message in the chat, it travels here, gets sent to
-OpenRouter, and the AI's reply comes back.
-
-KEY CONCEPTS:
-  - API (Application Programming Interface): a way for two programs to talk
-    to each other over the internet. OpenRouter exposes an API we can call.
-  - HTTP POST request: sending data to a server (like submitting a form).
-    We POST the conversation to OpenRouter and it POSTs back the AI reply.
-  - System prompt: instructions given to the AI before the conversation starts.
-    Think of it as the AI's job description.
+Flow for every chat message (handle_chat):
+  1. The Orchestrator writes a PLAN as JSON (route + reason + steps).
+  2. Our code reads the plan as DATA with json.loads and checks it.
+     (No eval(): model output is never run as Python here.)
+  3. Each step runs in order. A later step receives the earlier step's
+     result, which is what makes two-step requests work.
+  4. One final model call turns the results into a short, honest reply.
+  5. A trace is printed in the terminal for every message.
 """
 
+import json
 import os
-import requests
 import re
+import uuid
 
-# The URL we send our messages to.
-# OpenRouter acts as a single gateway to many different AI models.
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-# Which AI model to use. OpenRouter supports many models.
-# Models with ':free' suffix are free to use — no API credits needed.
-# See all available models at: https://openrouter.ai/models
-# QUESTION: What would change if you switched to a different model?
-#           Try 'google/gemma-2-9b-it:free' or 'mistralai/mistral-7b-instruct:free'.
-DEFAULT_MODEL = "openai/gpt-4o-mini"
+import requests
 from jinja2 import Template
 
-# One shared template for every expert's system prompt. Each expert just
-# fills in different values for role/domain/instructions/context/examples.
-#
-# We use Jinja2 here (not manual string replacement) because it's already a
-# Flask dependency — it's the exact same {{ }} / {% if %} syntax you've been
-# reading in resume.html, just rendering a prompt string instead of a page.
+from flask_app.utils.embeddings import EmbeddingError
+from flask_app.utils.semantic_search import semantic_search, SEARCHABLE_TABLES
+
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_MODEL = "openai/gpt-4o-mini"   # used when CHAT_MODEL is not set in .env
+
+
+# --------------------------------------------------------------------------
+# Talking to the chat model (from HW0)
+# --------------------------------------------------------------------------
+
+def send_message(user_message, system_prompt="You are a helpful assistant."):
+    """Send one message to the chat model and return its reply text."""
+    api_key = os.getenv('OPENROUTER_API_KEY')
+    if not api_key or api_key == 'paste-your-key-here':
+        return "⚠️ No API key found. Add your OpenRouter key to the .env file and restart the app."
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:8080",
+    }
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message},
+    ]
+    try:
+        response = requests.post(
+            OPENROUTER_URL,
+            headers=headers,
+            json={"model": os.getenv('CHAT_MODEL') or DEFAULT_MODEL, "messages": messages},
+            timeout=60,
+        )
+        result = response.json()
+    except Exception as error:
+        return f"⚠️ Could not reach OpenRouter: {error}"
+
+    if 'error' in result:
+        return f"⚠️ OpenRouter error: {result['error'].get('message', 'Unknown API error')}"
+    if 'choices' not in result:
+        return f"⚠️ Unexpected response from OpenRouter: {result}"
+    return result['choices'][0]['message']['content']
+
+
+# --------------------------------------------------------------------------
+# Expert prompts (from HW1)
+# --------------------------------------------------------------------------
+
 MASTER_TEMPLATE = Template("""\
 You are a {{ role }}, an expert in {{ domain }}.
 
@@ -53,15 +84,8 @@ Request: {{ request }}
 
 
 def fill_template(role, domain, specific_instructions, request,
-                   background_context="", few_shot_examples=""):
-    """
-    Render MASTER_TEMPLATE into one expert's full system prompt.
-
-    background_context and few_shot_examples are optional: the {% if %}
-    blocks above drop the whole section — header included — when the
-    argument is empty, instead of leaving a dangling "Context:" with
-    nothing underneath it.
-    """
+                  background_context="", few_shot_examples=""):
+    """Render MASTER_TEMPLATE into one expert's system prompt."""
     return MASTER_TEMPLATE.render(
         role=role,
         domain=domain,
@@ -72,87 +96,21 @@ def fill_template(role, domain, specific_instructions, request,
     ).strip()
 
 
-def send_message(user_message, system_prompt="You are a helpful assistant."):
+def strip_code_fences(text):
     """
-    Send a message to the AI and return its response as a string.
-
-    Args:
-        user_message  (str): The message the user typed in the chat.
-        system_prompt (str): Instructions that define how the AI should behave.
-                             This is sent before the user message, every time.
-
-    Returns:
-        str: The AI's reply text, or an error message if something went wrong.
-
-    HOW IT WORKS:
-        We build a 'messages' list with two entries:
-          1. system — gives the AI its instructions (the resume context)
-          2. user   — the student's actual question
-        We send this list to OpenRouter, which forwards it to the AI model
-        and returns the generated reply.
-
-    # NOTE: This function has no memory — each call starts fresh.
-    #       Every message includes the full system prompt but no chat history.
-    # QUESTION: How would you modify this to remember previous messages?
-    #           Hint: you would need to store past messages and include them
-    #           in the 'messages' list between the system and user entries.
+    Models often wrap answers in ```json ... ``` or ```sql ... ```.
+    Remove that wrapper so json.loads / SQLite get the content itself.
     """
-    api_key = os.getenv('OPENROUTER_API_KEY')
+    text = text.strip()
+    match = re.match(r"^```[a-zA-Z]*\s*(.*?)\s*```$", text, re.DOTALL)
+    return match.group(1).strip() if match else text
 
-    # If the .env file is missing or the key was not filled in, tell the user
-    # immediately rather than making a doomed API call that will just hang.
-    if not api_key or api_key == 'paste-your-key-here':
-        return "⚠️ No API key found. Add your OpenRouter key to the .env file and restart the app."
 
-    # The Authorization header tells OpenRouter who we are.
-    # "Bearer" is just a standard prefix for API key authentication.
-    # NEVER hardcode the api_key here — always load it from the .env file.
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:8080"   # identifies our app to OpenRouter
-    }
-
-    # The messages list defines the conversation context for the AI.
-    # 'system' sets the AI's role and knowledge before it sees our question.
-    # 'user' is the message the student actually typed.
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": user_message}
-    ]
-
-    # Send the HTTP POST request to OpenRouter.
-    # timeout=30 means: give up if we don't hear back within 30 seconds.
-    response = requests.post(
-        OPENROUTER_URL,
-        headers=headers,
-        json={"model": DEFAULT_MODEL, "messages": messages},
-        timeout=30
-    )
-
-    result = response.json()
-
-    # OpenRouter sometimes returns HTTP 200 but with an 'error' field instead
-    # of 'choices' — this happens with a bad API key or an invalid request.
-    # QUESTION: Print result here and see what OpenRouter actually sends back.
-    if 'error' in result:
-        error_message = result['error'].get('message', 'Unknown API error')
-        return f"⚠️ OpenRouter error: {error_message}"
-
-    if 'choices' not in result:
-        return f"⚠️ Unexpected response from OpenRouter: {result}"
-
-    return result['choices'][0]['message']['content']
-
-def handle_ai_chat_request(db, role, message):
-    """Route a chat message to the named expert."""
-    if role is None:
-        return send_message(message)
-
+def ask_expert(db, role, message):
+    """Build the expert's prompt from llm_roles, call the model, clean the output."""
     config = db.getLLMRoles()[role]
     background_context = config['background_context'] or ""
     if role == "Content Expert":
-        # "current page content" is the resume data itself
         background_context += "\n" + db.getResumeText()
 
     system_prompt = fill_template(
@@ -163,66 +121,213 @@ def handle_ai_chat_request(db, role, message):
         few_shot_examples=config['few_shot_examples'] or "",
         request=message,
     )
-    output = send_message(message, system_prompt).strip()
-    print(f"[{role}] generated:\n{output}\n")   # the rubric checks this output
-
-    if role == "Database Read Expert":
-        return execute_read_query(db, output)
-    if role == "Database Write Expert":
-        return execute_write_action(db, output)
-    if role == "Orchestrator":
-        return run_orchestrator_plan(db, message, output)
-    return output   # Content Expert -- output is already the final answer
+    return strip_code_fences(send_message(message, system_prompt))
 
 
-def execute_read_query(db, sql):
-    """Run the Read Expert's SQL -- SELECT only, for safety."""
+# --------------------------------------------------------------------------
+# The trace: a short log of what happened for every message
+# --------------------------------------------------------------------------
+
+class Trace:
+    """Prints one line per event, all tagged with the same request ID."""
+
+    def __init__(self, user_message):
+        self.request_id = uuid.uuid4().hex[:6]
+        print(f"\n[{self.request_id}] ===== new request =====")
+        self.log("user", user_message)
+
+    def log(self, label, text):
+        print(f"[{self.request_id}] {label:10} | {text}")
+
+
+# --------------------------------------------------------------------------
+# Reading and checking the Orchestrator's plan
+# --------------------------------------------------------------------------
+
+ALLOWED_ROUTES = {"exact", "semantic", "two_step", "write", "content"}
+ALLOWED_EXPERTS = {"Semantic Search", "Database Read Expert",
+                   "Database Write Expert", "Content Expert"}
+MAX_STEPS = 3
+
+
+def parse_plan(plan_text):
+    """
+    Read the Orchestrator's plan as DATA (json.loads, never eval) and check
+    every part of it. Returns (route, reason, steps) or raises ValueError.
+    """
+    plan = json.loads(plan_text)          # raises ValueError if it isn't JSON
+    if not isinstance(plan, dict):
+        raise ValueError("the plan must be a JSON object")
+
+    route = plan.get("route")
+    reason = str(plan.get("reason", "")).strip()
+    steps = plan.get("steps")
+
+    if route not in ALLOWED_ROUTES:
+        raise ValueError(f"unknown route {route!r}")
+    if not isinstance(steps, list) or not 1 <= len(steps) <= MAX_STEPS:
+        raise ValueError(f"steps must be a list of 1 to {MAX_STEPS} steps")
+
+    for number, step in enumerate(steps, start=1):
+        if not isinstance(step, dict):
+            raise ValueError(f"step {number} is not an object")
+        expert = step.get("expert")
+        if expert not in ALLOWED_EXPERTS:
+            raise ValueError(f"step {number}: unknown expert {expert!r}")
+        if expert == "Semantic Search":
+            if not str(step.get("query", "")).strip():
+                raise ValueError(f"step {number}: search needs a query")
+            tables = step.get("tables") or SEARCHABLE_TABLES
+            if not isinstance(tables, list) or any(t not in SEARCHABLE_TABLES for t in tables):
+                raise ValueError(f"step {number}: unknown table in {tables!r}")
+            step["tables"] = tables
+        elif not str(step.get("message", "")).strip():
+            raise ValueError(f"step {number}: {expert} needs a message")
+
+    return route, reason, steps
+
+
+# --------------------------------------------------------------------------
+# Running each kind of step
+# --------------------------------------------------------------------------
+
+NAME_COLUMN = {          # table -> (id column, name column)
+    'institutions': ('inst_id', 'name'),
+    'positions': ('position_id', 'title'),
+    'experiences': ('experience_id', 'name'),
+    'skills': ('skill_id', 'name'),
+}
+
+
+def record_name(db, table, record_id):
+    """The record's exact stored name, so a later SQL step can use it."""
+    id_column, name_column = NAME_COLUMN[table]
+    rows = db.query(f"SELECT {name_column} AS name FROM {table} WHERE {id_column} = ?",
+                    (record_id,))
+    return rows[0]['name'] if rows else ''
+
+
+def run_semantic_step(db, step, trace):
+    """Search by meaning and report the ranked results with their scores."""
+    try:
+        matches, all_scored = semantic_search(db, step["query"], tables=step["tables"])
+    except EmbeddingError as error:
+        trace.log("search", f"FAILED: {error}")
+        return "ERROR: search by meaning is unavailable right now (the embedding call failed)."
+
+    trace.log("search", f'query="{step["query"]}" tables={step["tables"]}')
+    for result in all_scored[:5]:
+        status = "MATCH" if result in matches else "below cut-off"
+        trace.log("search", f"  {result['score']:.3f}  {result['table']} #{result['id']}  "
+                            f"{result['text'][:55]}  ({status})")
+
+    if not matches:
+        return "NOT FOUND: no record matched closely enough."
+    lines = [
+        f"{m['table']} #{m['id']} name='{record_name(db, m['table'], m['id'])}' "
+        f"(score {m['score']:.2f}): {m['text']}"
+        for m in matches
+    ]
+    return "Found:\n" + "\n".join(lines)
+
+
+def execute_read_query(db, sql, trace):
+    """Run the Read Expert's SQL. Only a single SELECT is allowed."""
     if not sql.strip().upper().startswith("SELECT"):
+        trace.log("read", "REFUSED: not a SELECT")
         return "Sorry, I couldn't safely answer that question."
     try:
-        return str(db.query(sql))
+        rows = db.query(sql)
     except Exception as error:
-        print(f"Read Expert query failed: {error}")
+        trace.log("read", f"FAILED: {error}")
         return "Sorry, that question couldn't be answered."
+    trace.log("read", f"rows returned: {rows}")
+    return str(rows) if rows else "NOT FOUND: the query returned no rows."
 
 
-def execute_write_action(db, generated_code):
-    """Run the Write Expert's generated Python with exec()."""
+def execute_write_action(db, generated_code, trace):
+    """
+    TEMPORARY (Phase 4): still the HW1 exec() version.
+    Phase 5 replaces this with allowed operations + approval.
+    """
     local_vars = {}
     try:
         exec(generated_code, {"db": db, "NULL": None}, local_vars)
     except Exception as error:
-        print(f"Write Expert code failed: {error}")
+        trace.log("write", f"FAILED: {error}")
         return "Operation was unsuccessful."
     return local_vars.get("outcome", "Operation was unsuccessful.")
 
 
-def run_orchestrator_plan(db, original_request, plan_text):
-    """Run each expert call from the Orchestrator's plan, then summarize."""
+def run_step(db, step, previous_result, trace):
+    """Run one step. `previous_result` is what the step before it produced."""
+    expert = step["expert"]
+    if expert == "Semantic Search":
+        return run_semantic_step(db, step, trace)
+
+    message = step["message"]
+    if previous_result:
+        message += ("\n\nResult of the previous step (use these exact names):\n"
+                    + previous_result)
+
+    output = ask_expert(db, expert, message)
+    trace.log(expert.split()[1].lower() if expert.startswith("Database") else "content",
+              f"generated: {output}")
+    if output.startswith("⚠️"):
+        return output
+    if expert == "Database Read Expert":
+        return execute_read_query(db, output, trace)
+    if expert == "Database Write Expert":
+        return execute_write_action(db, output, trace)
+    return output                              # Content Expert
+
+
+# --------------------------------------------------------------------------
+# One chat message, start to finish
+# --------------------------------------------------------------------------
+
+def synthesize(user_message, results):
+    """One final model call that turns the step results into a short reply."""
+    steps_summary = "\n\n".join(f"{expert}:\n{result}" for expert, result in results)
+    instructions = (
+        f'The user asked: "{user_message}"\n\n'
+        f"Here is what each step found or did:\n{steps_summary}\n\n"
+        "Write ONE short, clear reply using ONLY these results. Rules:\n"
+        "- If a result says NOT FOUND, clearly say it was not found. Never invent a record.\n"
+        "- If a result starts with ERROR, say that search is unavailable right now.\n"
+        "- If a Database Write Expert result is present, reuse it word for word.\n"
+        "- Never mention SQL, Python, code, scores or these internal steps."
+    )
+    return send_message(user_message, instructions)
+
+
+def handle_chat(db, user_message):
+    """Handle one chat message: plan -> check -> run steps -> reply, with a trace."""
+    trace = Trace(user_message)
+
+    plan_text = ask_expert(db, "Orchestrator", user_message)
+    trace.log("plan", plan_text)
     try:
-        call_strings = eval(plan_text)   # the Orchestrator's own list literal
-    except Exception:
-        print(f"Orchestrator returned an unparseable plan: {plan_text}")
+        route, reason, steps = parse_plan(plan_text)
+    except ValueError as error:
+        trace.log("plan", f"REJECTED: {error}")
+        trace.log("outcome", "no steps were run")
         return "Sorry, I couldn't plan a response to that."
 
-    results = []
-    for call_string in call_strings:
-        print(f"[Orchestrator] executing: {call_string}")
-        match = re.search(r'role="([^"]*)",\s*message="([^"]*)"', call_string)
-        role, message = match.group(1), match.group(2)
-        response = handle_ai_chat_request(db, role, message)
-        results.append((role, message, response))
+    trace.log("route", f"{route} - {reason}")
+    results, previous_result = [], ""
+    for number, step in enumerate(steps, start=1):
+        trace.log("step", f"{number}/{len(steps)} {step['expert']}")
+        previous_result = run_step(db, step, previous_result, trace)
+        results.append((step["expert"], previous_result))
 
-    steps_summary = "\n".join(f"{r}: {resp}" for r, m, resp in results)
-    synthesis_prompt = (
-        f'The user asked: "{original_request}"\n\n'
-        f"Here is what each expert found or did:\n{steps_summary}\n\n"
-        "Write ONE short, clear reply. A Database Write Expert step's result "
-        "is already the exact message to show the user (e.g. 'New Python "
-        "added to the skills table.') -- if one is present, reuse it "
-        "verbatim rather than rephrasing it. Otherwise, summarize the "
-        "other results in plain language. Never mention SQL, Python, code, "
-        "or these internal steps."
-    )
-    return send_message(original_request, synthesis_prompt)
+    reply = synthesize(user_message, results)
+    trace.log("outcome", reply.replace("\n", " ")[:150])
+    return reply
 
+
+def handle_ai_chat_request(db, role, message):
+    """Kept for compatibility with socket_events.py (HW1 called this)."""
+    if role == "Orchestrator":
+        return handle_chat(db, message)
+    return send_message(message)
