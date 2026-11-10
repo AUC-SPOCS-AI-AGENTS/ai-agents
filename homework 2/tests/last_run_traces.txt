@@ -1,0 +1,235 @@
+
+########## S1: Find my MSU experience ##########
+
+[0a39fd] ===== new request =====
+[0a39fd] user       | Find my MSU experience
+[0a39fd] plan       | {"route": "semantic", "reason": "MSU is an abbreviation that may not match the stored name", "steps": [{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions", "positions", "experiences"]}]}
+[0a39fd] route      | semantic - MSU is an abbreviation that may not match the stored name
+[0a39fd] step       | 1/1 Semantic Search
+[0a39fd] search     | query="MSU" tables=['institutions', 'positions', 'experiences']
+[0a39fd] search     |   0.648  institutions #1  Michigan State University, Computer Science, East Lansi  (MATCH)
+[0a39fd] search     |   0.492  positions #1  Instructor at Michigan State University: Teach classes;  (MATCH)
+[0a39fd] search     |   0.380  positions #2  Researcher at Michigan State University: Perform resear  (MATCH)
+[0a39fd] search     |   0.219  experiences #1  CSE 477: Taught an introductory course on web applicati  (below cut-off)
+[0a39fd] search     |   0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+[0a39fd] approval   | none
+[0a39fd] outcome    | Your MSU experience includes the following positions:  1. Instructor at Michigan State University: Teach classes; mostly NLP and Web design. 2. Resear
+[reply] Your MSU experience includes the following positions:
+
+1. Instructor at Michigan State University: Teach classes; mostly NLP and Web design.
+2. Researcher at Michigan State University: Perform research at the interface of AI and healthcare.
+
+########## S2: What AI skills do I have? ##########
+
+[586a20] ===== new request =====
+[586a20] user       | What AI skills do I have?
+[586a20] plan       | {"route": "semantic", "reason": "AI is a category, no skill is literally named AI", "steps": [{"expert": "Semantic Search", "query": "AI skills", "tables": ["skills"]}]}
+[586a20] route      | semantic - AI is a category, no skill is literally named AI
+[586a20] step       | 1/1 Semantic Search
+[586a20] search     | query="AI skills" tables=['skills']
+[586a20] search     |   0.491  skills #5  Machine Learning  (MATCH)
+[586a20] search     |   0.320  skills #6  Natural Language Processing  (MATCH)
+[586a20] search     |   0.305  skills #1  Javascript  (below cut-off)
+[586a20] search     |   0.305  skills #2  Python  (below cut-off)
+[586a20] search     |   0.292  skills #7  Public Speaking  (below cut-off)
+[586a20] approval   | none
+[586a20] outcome    | You have skills in Machine Learning and Natural Language Processing.
+[reply] You have skills in Machine Learning and Natural Language Processing.
+
+########## S3: How many positions do I have? ##########
+
+[aa9e07] ===== new request =====
+[aa9e07] user       | How many positions do I have?
+[aa9e07] plan       | {"route": "exact", "reason": "counting needs an exact SQL query", "steps": [{"expert": "Database Read Expert", "message": "How many positions are there in total?"}]}
+[aa9e07] route      | exact - counting needs an exact SQL query
+[aa9e07] step       | 1/1 Database Read Expert
+[aa9e07] read       | generated: SELECT COUNT(*) FROM positions;
+[aa9e07] read       | rows returned: [{'COUNT(*)': 4}]
+[aa9e07] approval   | none
+[aa9e07] outcome    | You have 4 positions.
+[reply] You have 4 positions.
+
+########## S4: What did I do at MSU? ##########
+
+[520394] ===== new request =====
+[520394] user       | What did I do at MSU?
+[520394] plan       | {"route": "two_step", "reason": "MSU must be resolved to the stored name before an exact lookup", "steps": [{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions"]}, {"expert": "Database Read Expert", "message": "List the positions and responsibilities at the institution found in step 1."}]}
+[520394] route      | two_step - MSU must be resolved to the stored name before an exact lookup
+[520394] step       | 1/2 Semantic Search
+[520394] search     | query="MSU" tables=['institutions']
+[520394] search     |   0.648  institutions #1  Michigan State University, Computer Science, East Lansi  (MATCH)
+[520394] search     |   0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+[520394] search     |   0.135  institutions #3  Standard and Poor's Financial Services, Ratings, New Yo  (below cut-off)
+[520394] step       | 2/2 Database Read Expert
+[520394] read       | generated: SELECT p.title, p.responsibilities FROM positions p JOIN institutions i ON p.inst_id = i.inst_id WHERE i.name LIKE '%Michigan%';
+[520394] read       | rows returned: [{'title': 'Instructor', 'responsibilities': 'Teach classes; mostly NLP and Web design.'}, {'title': 'Researcher', 'responsibilities': 'Perform research at interface of AI and healthcare.'}]
+[520394] approval   | none
+[520394] outcome    | At MSU, you were an Instructor, responsible for teaching classes, mostly in NLP and Web design. You also worked as a Researcher, performing research a
+[reply] At MSU, you were an Instructor, responsible for teaching classes, mostly in NLP and Web design. You also worked as a Researcher, performing research at the interface of AI and healthcare.
+
+########## S5: Add a skill, restart, still there and searchable ##########
+
+[fee4e0] ===== new request =====
+[fee4e0] user       | Add Rust as a skill to BRAINWORKS
+[fee4e0] plan       | {"route": "write", "reason": "the user wants to add data", "steps": [{"expert": "Database Write Expert", "message": "Add Rust as a skill to the BRAINWORKS experience."}]}
+[fee4e0] route      | write - the user wants to add data
+[fee4e0] step       | 1/1 Database Write Expert
+[fee4e0] write      | generated: {"operation": "add_skill", "values": {"skill_name": "Rust", "skill_level": 5, "experience_name": "BRAINWORKS"}}
+[fee4e0] write      | proposed: add_skill | Add skill 'Rust' (level 5) to experience 'BRAINWORKS'.
+  [embeddings] synced: 1 new/updated, 0 removed, 0 failed
+[fee4e0] approval   | none
+[fee4e0] outcome    | Added skill 'Rust' (level 5).
+[reply] Added skill 'Rust' (level 5).
+
+########## S6: Deletion request, then no ##########
+
+[f607c1] ===== new request =====
+[f607c1] user       | Remove Python from CSE 847
+[f607c1] plan       | {"route": "write", "reason": "the user wants to delete data", "steps": [{"expert": "Database Write Expert", "message": "Remove Python from CSE 847."}]}
+[f607c1] route      | write - the user wants to delete data
+[f607c1] step       | 1/1 Database Write Expert
+[f607c1] write      | generated: {"operation": "delete_skill", "values": {"skill_name": "Python", "experience_name": "CSE 847"}}
+[f607c1] write      | proposed: delete_skill | This will delete skill 'Python' from experience 'CSE 847'.
+[f607c1] approval   | waiting: This will delete skill 'Python' from experience 'CSE 847'.
+[f607c1] outcome    | paused, nothing was changed yet
+[reply] This will delete skill 'Python' from experience 'CSE 847'. Reply yes or no.
+
+[808627] ===== new request =====
+[808627] user       | no
+[808627] approval   | cancelled: the user said no
+[808627] outcome    | nothing was changed
+[reply] Cancelled. Nothing was changed.
+
+########## S7: Same deletion request, then yes ##########
+
+[18fea5] ===== new request =====
+[18fea5] user       | Remove Python from CSE 847
+[18fea5] plan       | {"route": "write", "reason": "the user wants to delete data", "steps": [{"expert": "Database Write Expert", "message": "Remove Python from CSE 847."}]}
+[18fea5] route      | write - the user wants to delete data
+[18fea5] step       | 1/1 Database Write Expert
+[18fea5] write      | generated: {"operation": "delete_skill", "values": {"skill_name": "Python", "experience_name": "CSE 847"}}
+[18fea5] write      | proposed: delete_skill | This will delete skill 'Python' from experience 'CSE 847'.
+[18fea5] approval   | waiting: This will delete skill 'Python' from experience 'CSE 847'.
+[18fea5] outcome    | paused, nothing was changed yet
+[reply] This will delete skill 'Python' from experience 'CSE 847'. Reply yes or no.
+
+[e3849e] ===== new request =====
+[e3849e] user       | yes
+[e3849e] approval   | approved: This will delete skill 'Python' from experience 'CSE 847'.
+  [embeddings] synced: 0 new/updated, 1 removed, 0 failed
+[e3849e] outcome    | Done. Deleted 1 skill.
+[reply] Done. Deleted 1 skill.
+
+########## S8: Deletion, then maybe; and deletion, then change of subject ##########
+
+[28d1cd] ===== new request =====
+[28d1cd] user       | Remove CSS from CSE 847
+[28d1cd] plan       | {"route": "write", "reason": "the user wants to delete data", "steps": [{"expert": "Database Write Expert", "message": "Remove CSS from CSE 847."}]}
+[28d1cd] route      | write - the user wants to delete data
+[28d1cd] step       | 1/1 Database Write Expert
+[28d1cd] write      | generated: {"operation": "delete_skill", "values": {"skill_name": "CSS", "experience_name": "CSE 847"}}
+[28d1cd] write      | proposed: delete_skill | This will delete skill 'CSS' from experience 'CSE 847'.
+[28d1cd] approval   | waiting: This will delete skill 'CSS' from experience 'CSE 847'.
+[28d1cd] outcome    | paused, nothing was changed yet
+[reply] This will delete skill 'CSS' from experience 'CSE 847'. Reply yes or no.
+
+[c32a7e] ===== new request =====
+[c32a7e] user       | maybe
+[c32a7e] approval   | cancelled: unclear answer (not a clear yes)
+[c32a7e] outcome    | nothing was changed
+[reply] That wasn't a clear yes, so I cancelled it. Nothing was changed. Ask again if you still want it.
+
+[db38b4] ===== new request =====
+[db38b4] user       | Remove CSS from CSE 847
+[db38b4] plan       | {"route": "write", "reason": "the user wants to delete data", "steps": [{"expert": "Database Write Expert", "message": "Remove CSS from CSE 847."}]}
+[db38b4] route      | write - the user wants to delete data
+[db38b4] step       | 1/1 Database Write Expert
+[db38b4] write      | generated: {"operation": "delete_skill", "values": {"skill_name": "CSS", "experience_name": "CSE 847"}}
+[db38b4] write      | proposed: delete_skill | This will delete skill 'CSS' from experience 'CSE 847'.
+[db38b4] approval   | waiting: This will delete skill 'CSS' from experience 'CSE 847'.
+[db38b4] outcome    | paused, nothing was changed yet
+[reply] This will delete skill 'CSS' from experience 'CSE 847'. Reply yes or no.
+
+[5676f5] ===== new request =====
+[5676f5] user       | How many skills do I have?
+[5676f5] approval   | cancelled: the user changed the subject
+[5676f5] plan       | {"route": "exact", "reason": "counting needs an exact SQL query", "steps": [{"expert": "Database Read Expert", "message": "How many skills are there in total?"}]}
+[5676f5] route      | exact - counting needs an exact SQL query
+[5676f5] step       | 1/1 Database Read Expert
+[5676f5] read       | generated: SELECT COUNT(*) FROM skills;
+[5676f5] read       | rows returned: [{'COUNT(*)': 7}]
+[5676f5] approval   | none
+[5676f5] outcome    | You have 7 skills.
+[reply] You have 7 skills.
+
+[59c048] ===== new request =====
+[59c048] user       | yes
+[59c048] approval   | none: nothing is waiting
+[59c048] outcome    | nothing was changed
+[reply] There is nothing waiting for your approval, so nothing was changed.
+
+########## S9: Clean up my skills so the list is empty ##########
+
+[a8c29f] ===== new request =====
+[a8c29f] user       | Clean up my skills so the list is empty
+[a8c29f] plan       | {"route": "write", "reason": "emptying the skills list deletes data", "steps": [{"expert": "Database Write Expert", "message": "Remove every skill from the skills list."}]}
+[a8c29f] route      | write - emptying the skills list deletes data
+[a8c29f] step       | 1/1 Database Write Expert
+[a8c29f] write      | generated: {"operation": "delete_all_skills", "values": {}}
+[a8c29f] write      | proposed: delete_all_skills | This will delete ALL 7 skills: Javascript, HTML, CSS, Machine Learning, Natural Language Processing, Public Speaking, Rust.
+[a8c29f] approval   | waiting: This will delete ALL 7 skills: Javascript, HTML, CSS, Machine Learning, Natural Language Processing, Public Speaking, Rust.
+[a8c29f] outcome    | paused, nothing was changed yet
+[reply] This will delete ALL 7 skills: Javascript, HTML, CSS, Machine Learning, Natural Language Processing, Public Speaking, Rust. Reply yes or no.
+
+[16ffe9] ===== new request =====
+[16ffe9] user       | no
+[16ffe9] approval   | cancelled: the user said no
+[16ffe9] outcome    | nothing was changed
+[reply] Cancelled. Nothing was changed.
+
+########## S10: Embedding call fails ##########
+
+[79054b] ===== new request =====
+[79054b] user       | Find my MSU experience
+[79054b] plan       | {"route": "semantic", "reason": "MSU is an abbreviation that may not match the stored name", "steps": [{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions", "positions", "experiences"]}]}
+[79054b] route      | semantic - MSU is an abbreviation that may not match the stored name
+[79054b] step       | 1/1 Semantic Search
+[79054b] search     | FAILED: OpenRouter error: {'message': 'Model not-a-real/embedding-model does not exist', 'code': 400}
+[79054b] approval   | none
+[79054b] outcome    | ERROR: search by meaning is unavailable right now.
+[reply] ERROR: search by meaning is unavailable right now.
+
+[aacedd] ===== new request =====
+[aacedd] user       | Find my MSU experience
+[aacedd] plan       | {"route": "semantic", "reason": "MSU is an abbreviation that may not match the stored name", "steps": [{"expert": "Semantic Search", "query": "MSU", "tables": ["institutions", "positions", "experiences"]}]}
+[aacedd] route      | semantic - MSU is an abbreviation that may not match the stored name
+[aacedd] step       | 1/1 Semantic Search
+[aacedd] search     | query="MSU" tables=['institutions', 'positions', 'experiences']
+[aacedd] search     |   0.648  institutions #1  Michigan State University, Computer Science, East Lansi  (MATCH)
+[aacedd] search     |   0.492  positions #1  Instructor at Michigan State University: Teach classes;  (MATCH)
+[aacedd] search     |   0.380  positions #2  Researcher at Michigan State University: Perform resear  (MATCH)
+[aacedd] search     |   0.219  experiences #1  CSE 477: Taught an introductory course on web applicati  (below cut-off)
+[aacedd] search     |   0.215  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+[aacedd] approval   | none
+[aacedd] outcome    | Your MSU experience includes the following positions:  1. Instructor at Michigan State University: Teach classes; mostly NLP and Web design. 2. Resear
+[reply] Your MSU experience includes the following positions:
+
+1. Instructor at Michigan State University: Teach classes; mostly NLP and Web design.
+2. Researcher at Michigan State University: Perform research at the interface of AI and healthcare.
+
+########## S11: Find my Harvard experience ##########
+
+[8f3f6c] ===== new request =====
+[8f3f6c] user       | Find my Harvard experience
+[8f3f6c] plan       | {"route": "semantic", "reason": "Harvard is a name that may not match the stored name exactly", "steps": [{"expert": "Semantic Search", "query": "Harvard", "tables": ["institutions", "positions", "experiences"]}]}
+[8f3f6c] route      | semantic - Harvard is a name that may not match the stored name exactly
+[8f3f6c] step       | 1/1 Semantic Search
+[8f3f6c] search     | query="Harvard" tables=['institutions', 'positions', 'experiences']
+[8f3f6c] search     |   0.313  positions #3  National Scholar at National Institutes of Health: Help  (below cut-off)
+[8f3f6c] search     |   0.280  positions #4  Associate Director at Standard and Poor's Financial Ser  (below cut-off)
+[8f3f6c] search     |   0.275  experiences #4  BRAINWORKS: Developed a platform to organize the scient  (below cut-off)
+[8f3f6c] search     |   0.273  institutions #2  National Institutes of Health, Bethesda, Maryland  (below cut-off)
+[8f3f6c] search     |   0.254  institutions #1  Michigan State University, Computer Science, East Lansi  (below cut-off)
+[8f3f6c] approval   | none
+[8f3f6c] outcome    | NOT FOUND: no record matched closely enough.
+[reply] NOT FOUND: no record matched closely enough.
